@@ -1,0 +1,29 @@
+{
+  "id": "ep001_emu_war",
+  "title": "The Army That Lost a War to Birds",
+  "voice": "Charon",
+  "style": "Read this like a calm, deadpan British-style documentary narrator telling a ridiculous true story. Steady tone, unhurried, dry, never shouting. Small pauses before punchlines.",
+  "beats": [
+    {"vo": "In 1932, the Australian army declared war on a bird. And lost."},
+    {"vo": "It's late 1932 in Western Australia, and around twenty thousand emus have just walked out of the outback, straight into the wheat fields."},
+    {"vo": "Many of these farmers fought in the First World War, so they ask the army for help."},
+    {"vo": "The army sends three soldiers, two machine guns, and ten thousand bullets."},
+    {"vo": "Day one, they spot fifty emus. The birds are out of range, and simply jog away."},
+    {"vo": "Day three, a thousand emus walk up to a dam. The perfect ambush. Then the gun jams."},
+    {"vo": "So they bolt a machine gun onto a truck. But emus can run thirty miles an hour, and the ride is so bumpy the gunner can't aim at anything."},
+    {"vo": "Then the birds split into small groups, each with its own leader keeping watch."},
+    {"vo": "After six days, the army retreats."},
+    {"vo": "Luckily, they came back for a second try. Unluckily, so did the emus."},
+    {"vo": "The major in charge reported that the birds could face machine guns like tanks."},
+    {"vo": "Ever tried to catch one pigeon in a park? Now picture twenty thousand of them, six feet tall, that can outrun your truck."},
+    {"vo": "After a month and nearly ten thousand bullets, the army claimed about a thousand emus. That's ten bullets per bird."},
+    {"vo": "Farmers asked for the army again in 1934, 1943, and 1948. The answer was always no."},
+    {"vo": "Today, the emu stands proudly on Australia's coat of arms. It was there before the war, too."}
+  ],
+  "caption": "In 1932 the Australian army went to war against emus. It did not go well. #history #emuwar #australia #didyouknow #animation",
+  "sources": [
+    "https://en.wikipedia.org/wiki/Emu_War",
+    "https://www.britannica.com/topic/Emu-War",
+    "https://www.australiangeographic.com.au/topics/wildlife/2016/10/australias-emu-wars/"
+  ]
+}
