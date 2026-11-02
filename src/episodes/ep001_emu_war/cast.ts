@@ -311,7 +311,7 @@ export const stage = (id: number, t: number, cam: CamInfo, truck: THREE.Object3D
     case 1: { // one gunner behind a gun on a crate, one emu. "And lost."
       crate(cam, out, HOOK[0], 0, HOOK[2] - 0.9);
       gun(cam, out, HOOK[0], 0.48, HOOK[2] - 0.9, [0, -1], firing(t, 2.2, 2.75));
-      human(cam, out, 0, t, HOOK[0] + 0.15, HOOK[2], { o: DIG[0], okey: "d0", expr: t < 2.9 ? "stern" : "pained", dir: [0, -1] });
+      human(cam, out, 0, t, HOOK[0] - 0.5, HOOK[2] - 0.2, { o: DIG[0], okey: "d0", expr: t < 2.9 ? "stern" : "pained", dir: [0, -1] });
       emu(cam, out, 1, t, S1_EMU[0], S1_EMU[2], { pose: "stand", front: true, expr: t < 2.85 ? "deadpan" : "smug" });
       grazers(cam, out, t, 6, HOOK[0] - 6, HOOK[2] - 40, 25, 10, 1);
       break;
@@ -333,12 +333,12 @@ export const stage = (id: number, t: number, cam: CamInfo, truck: THREE.Object3D
       crate(cam, out, GUN5[0], 0, GUN5[2] - 0.9);
       const fire = firing(t, 19.9, 22.6);
       gun(cam, out, GUN5[0], 0.48, GUN5[2] - 0.9, [0, -1], fire);
-      human(cam, out, 20, t, GUN5[0] + 0.15, GUN5[2], { o: DIG[1], okey: "d1", expr: t < 21.0 ? "stern" : "nervous", dir: [0, -1] });
+      human(cam, out, 20, t, GUN5[0] - 0.5, GUN5[2] - 0.2, { o: DIG[1], okey: "d1", expr: t < 21.0 ? "stern" : "nervous", dir: [0, -1] });
       for (let i = 0; i < 50; i++) {
-        const jog = Math.max(0, t - 21.5), z = GUN5[2] - 92 - hh(i, 1) * 14 - 3.2 * jog, x = GUN5[0] + (hh(i, 2) - 0.5) * 34;
+        const jog = Math.max(0, t - 21.5), z = GUN5[2] - 60 - hh(i, 1) * 12 - 3.2 * jog, x = GUN5[0] + (hh(i, 2) - 0.5) * 34;
         emu(cam, out, 30 + i, t, x, z, jog > 0 ? { pose: "run", phase: ph(3.2 * jog, true, i), dir: [0, -1] } : { pose: hh(i, 3) < 0.5 ? "peck" : "stand", dir: [hh(i, 4) - 0.5, 1] });
       }
-      for (let k = 0; k < 14; k++) { const t0 = 19.95 + k * 0.19; puff(out, GUN5[0] + (hh(k, 9) - 0.5) * 22, GUN5[2] - 68 - hh(k, 10) * 10, (t - t0) / 0.9, 1.6); }
+      for (let k = 0; k < 14; k++) { const t0 = 19.95 + k * 0.19; puff(out, GUN5[0] + (hh(k, 9) - 0.5) * 22, GUN5[2] - 44 - hh(k, 10) * 8, (t - t0) / 0.9, 1.6); }
       break;
     }
     case 6: { // the dam: emus walk in and drink; three hidden gunners; the jam

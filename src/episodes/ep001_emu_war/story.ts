@@ -120,9 +120,9 @@ const S4b = (f: number) => dolly(at(CRATE_GUNS, 1.2, 1.25, -2.6), at(CRATE_GUNS,
 const S4c = (f: number) => zoom(at(AMMO, -2.6, 0.45, -5.8), at(AMMO, 0, 2.0, 0), 48, pushK(f, 500, 0.002, 0.005, 30), { roll: 0.04 });
 // shot 5: day one in the paddock, the gunner at GUN5 facing -z, emus ~95 m away
 export const GUN5: V3 = [150, 0, 40];
-const S5a = (f: number) => zoom(at(GUN5, 0.4, 1.6, 3.0), at(GUN5, 0, 1.0, -80), 34, pushK(f, 540, 0.0015));
-const S5b = (f: number) => dolly(at(GUN5, 3.4, 1.15, -1.0), at(GUN5, 0, 1.0, -0.4), pushK(f, 618, 0.0025), { fov: 40, roll: 0.03 });
-const S5c = (f: number) => zoom(at(GUN5, 0.6, 1.5, -38), at(GUN5, 0, 1.0, -100), 30, pushK(f, 650, 0.002), { roll: -0.03 });
+const S5a = (f: number) => zoom(at(GUN5, -0.5, 2.6, 5.5), at(GUN5, -0.3, 0.6, -55), 32, pushK(f, 540, 0.0015));
+const S5b = (f: number) => dolly(at(GUN5, 3.8, 1.2, -1.3), at(GUN5, -0.2, 0.95, -1.3), pushK(f, 618, 0.0025), { fov: 40, roll: 0.03 });
+const S5c = (f: number) => zoom(at(GUN5, 0.6, 1.5, -30), at(GUN5, 0, 1.0, -70), 32, pushK(f, 650, 0.002), { roll: -0.03 });
 // shot 6: the dam; three soldiers crouch behind its south bank, the gun on the bank top
 export const HIDE6: V3 = at(DAM, 0, 0, DAM_R + 6.5);
 const S6a = (f: number) => zoom(at(DAM, 26, 28, 40), at(DAM, 0, 0, -2), 44, pushK(f, 682, 0.002));

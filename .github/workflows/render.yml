@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       episode: { description: "Episode id (folder in episodes/ and src/episodes/)", required: true }
-      chunks: { description: "Parallel chunks (max 20)", default: "20" }
+      chunks: { description: "Parallel chunks (max 20)", default: "14" }
       scale: { description: "Render scale (1 = 1080x1920)", default: "1" }
 
 permissions:
