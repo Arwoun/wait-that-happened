@@ -64,11 +64,13 @@ jobs:
         run: echo "export { Short, FRAMES } from \"./$EP\";" > src/episodes/current.ts
       - name: Render frames ${{ matrix.a }}-${{ matrix.b }}
         run: |
+          set -o pipefail
           mkdir -p out tmp; export TMPDIR=$PWD/tmp
           npx remotion browser ensure
           npx remotion render src/index.tsx Short "out/c_${{ matrix.i }}.mp4" --frames=${{ matrix.a }}-${{ matrix.b }} \
             --scale=${{ github.event.inputs.scale }} --gl=swangle --concurrency=4 --codec=h264 --crf=16 --muted \
-            --timeout=900000 --log=info 2>&1 | grep -vE "Failed to load resource|differing memory|CGroup|meminfo|--memory|lower amount"
+            --timeout=900000 --log=info 2>&1 | { grep -vE "Failed to load resource|differing memory|CGroup|meminfo|--memory|lower amount" || true; }
+          test -s "out/c_${{ matrix.i }}.mp4"
           ls -la out
       - uses: actions/upload-artifact@v4
         with: { name: "chunk-${{ matrix.i }}", path: "out/c_${{ matrix.i }}.mp4", retention-days: 3 }
