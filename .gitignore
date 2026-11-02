@@ -6,3 +6,6 @@ tmp/
 __pycache__/
 .cache/
 !public/kenney/.gitkeep
+episodes/*/audio/mix.wav
+episodes/*/audio/stem_*.wav
+*.tmp.wav

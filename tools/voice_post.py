@@ -30,7 +30,7 @@ for i, (s, e) in enumerate(spans):
 y = np.concatenate(pieces)
 # 5 ms fades at every join are not needed: cuts sit in silence (PAD of air on both sides)
 dur = len(y) / SR
-tmp = out + ".tmp.wav"
+tmp = "/tmp/voice_post.tmp.wav"
 with wave.open(tmp, "wb") as f:
     f.setnchannels(1); f.setsampwidth(2); f.setframerate(SR); f.writeframes(np.clip(y, -32768, 32767).astype("<i2").tobytes())
 tempo = min(1.22, dur / max_s) if dur > max_s else 1.0
