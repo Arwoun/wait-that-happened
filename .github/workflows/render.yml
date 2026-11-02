@@ -1,0 +1,117 @@
+name: Render episode
+
+# Renders one episode in parallel chunks (software WebGL on free runners), then joins them,
+# builds the sound mix, muxes, runs the frame QA and publishes the MP4 as a Release tagged with the episode id.
+on:
+  workflow_dispatch:
+    inputs:
+      episode: { description: "Episode id (folder in episodes/ and src/episodes/)", required: true }
+      chunks: { description: "Parallel chunks (max 20)", default: "20" }
+      scale: { description: "Render scale (1 = 1080x1920)", default: "1" }
+
+permissions:
+  contents: write
+
+concurrency:
+  group: render-${{ github.event.inputs.episode }}
+  cancel-in-progress: true
+
+env:
+  EP: ${{ github.event.inputs.episode }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: m
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          ep = os.environ["EP"]; n = max(1, min(20, int("${{ github.event.inputs.chunks }}")))
+          F = json.load(open(f"episodes/{ep}/episode.json"))["frames"]
+          step = -(-F // n); rows = []
+          for i in range(n):
+              a, b = i * step, min(F, (i + 1) * step) - 1
+              if a <= b: rows.append({"i": f"{i:02d}", "a": a, "b": b})
+          print("matrix=" + json.dumps({"include": rows}))
+          PY
+      - uses: actions/cache@v4
+        id: kc
+        with: { path: public/kenney, key: kenney-v1 }
+      - name: Kenney kits (CC0)
+        if: steps.kc.outputs.cache-hit != 'true'
+        run: bash tools/fetch_kenney.sh
+
+  chunk:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/cache/restore@v4
+        with: { path: public/kenney, key: kenney-v1 }
+      - run: npm ci --no-audit --no-fund || npm i --no-audit --no-fund
+      - name: Select episode
+        run: echo "export { Short, FRAMES } from \"./$EP\";" > src/episodes/current.ts
+      - name: Render frames ${{ matrix.a }}-${{ matrix.b }}
+        run: |
+          mkdir -p out tmp; export TMPDIR=$PWD/tmp
+          npx remotion browser ensure
+          npx remotion render src/index.tsx Short "out/c_${{ matrix.i }}.mp4" --frames=${{ matrix.a }}-${{ matrix.b }} \
+            --scale=${{ github.event.inputs.scale }} --gl=swangle --concurrency=4 --codec=h264 --crf=16 --muted \
+            --timeout=900000 --log=info 2>&1 | grep -vE "Failed to load resource|differing memory|CGroup|meminfo|--memory|lower amount"
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with: { name: "chunk-${{ matrix.i }}", path: "out/c_${{ matrix.i }}.mp4", retention-days: 3 }
+
+  assemble:
+    needs: chunk
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { pattern: "chunk-*", path: out, merge-multiple: true }
+      - name: Dependencies
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null
+          pip install -q numpy scipy pillow
+      - name: Join chunks
+        run: |
+          ls out/c_*.mp4 | sort | sed "s#^out/#file '#; s#\$#'#" > out/list.txt
+          ffmpeg -y -loglevel error -f concat -safe 0 -i out/list.txt -c copy out/picture.mp4
+          ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames,width,height -of csv=p=0 out/picture.mp4
+      - name: Sound mix
+        run: |
+          d="episodes/$EP"
+          if [ -f "$d/audio/mix.py" ] && [ -f "$d/voice/voice.wav" ]; then
+            python "$d/audio/mix.py" && cp "$d/audio/mix.wav" out/mix.wav
+          elif [ -f "$d/voice/voice.wav" ]; then
+            cp "$d/voice/voice.wav" out/mix.wav; echo "::warning::no mix.py, voice only"
+          fi
+      - name: Mux
+        run: |
+          if [ -f out/mix.wav ]; then
+            ffmpeg -y -loglevel error -i out/picture.mp4 -i out/mix.wav -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 256k -shortest -movflags +faststart "out/$EP.mp4"
+          else cp out/picture.mp4 "out/$EP.mp4"; fi
+      - name: Frame QA
+        run: |
+          s=""; [ -f "episodes/$EP/shots.json" ] && s="episodes/$EP/shots.json"
+          python tools/qa/short_qa.py "out/$EP.mp4" out/qa $s | tee out/qa_report.txt || echo "::warning::QA script failed"
+          (cd out/qa && zip -q ../qa_sheets.zip *.jpg 2>/dev/null) || true
+      - name: Publish release
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          title=$(python3 -c "import json;print(json.load(open('episodes/$EP/episode.json')).get('title','$EP'))")
+          gh release delete "$EP" -y --cleanup-tag 2>/dev/null || true
+          extra=""; [ -f out/qa_sheets.zip ] && extra="out/qa_sheets.zip"
+          gh release create "$EP" "out/$EP.mp4" out/qa_report.txt $extra --title "$title" --notes "Rendered automatically ($(date -u +%F))."

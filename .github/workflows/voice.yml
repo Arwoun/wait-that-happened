@@ -1,0 +1,59 @@
+name: Voice (Gemini TTS + word timings)
+
+# Runs when an episode script is pushed. Writes episodes/<id>/voice/voice.wav (48 kHz mono) and words.json,
+# commits them back, and the episode's picture is then timed to those words.
+on:
+  push:
+    paths: ["episodes/*/script.json"]
+  workflow_dispatch:
+    inputs:
+      episode: { description: "Episode id (e.g. ep001_slug)", required: true }
+
+permissions:
+  contents: write
+
+concurrency:
+  group: voice
+  cancel-in-progress: false
+
+jobs:
+  voice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - name: Which episode
+        id: pick
+        run: |
+          if [ -n "${{ github.event.inputs.episode }}" ]; then echo "${{ github.event.inputs.episode }}" > list.txt
+          else git diff --name-only --diff-filter=AM HEAD~1 HEAD -- 'episodes/*/script.json' | cut -d/ -f2 > list.txt || true; fi
+          cat list.txt; echo "count=$(grep -c . list.txt || true)" >> "$GITHUB_OUTPUT"
+      - name: Dependencies
+        if: steps.pick.outputs.count != '0'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null
+          pip install -q google-genai faster-whisper numpy
+      - uses: actions/cache@v4
+        if: steps.pick.outputs.count != '0'
+        with: { path: ~/.cache/huggingface, key: whisper-small-en-v1 }
+      - name: Gemini voice + alignment
+        if: steps.pick.outputs.count != '0'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          while read -r ep; do
+            [ -z "$ep" ] && continue
+            d="episodes/$ep"; mkdir -p "$d/voice"
+            python tools/tts.py "$d/script.json" /tmp/raw.wav
+            # 48 kHz mono 16-bit, trim leading silence to 0.15 s, keep the end
+            ffmpeg -y -loglevel error -i /tmp/raw.wav -af "silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.15,aresample=48000" -ac 1 -c:a pcm_s16le "$d/voice/voice.wav"
+            python tools/align.py "$d/script.json" "$d/voice/voice.wav" "$d/voice/words.json"
+            ffprobe -v error -show_entries format=duration -of csv=p=0 "$d/voice/voice.wav"
+          done < list.txt
+      - name: Commit voice files
+        if: steps.pick.outputs.count != '0'
+        run: |
+          git config user.name "wth-bot"; git config user.email "wth-bot@users.noreply.github.com"
+          git add episodes/*/voice/ && git commit -qm "Voice + word timings [skip ci]" || exit 0
+          for i in 1 2 3; do git pull -q --rebase origin main && git push -q origin HEAD:main && break; sleep 5; done
