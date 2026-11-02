@@ -292,3 +292,19 @@ export const emblem = (p: Pen) => {
   for (const x of [443, 557]) p.stroke([[x, 232], [x, 700]], 5);
   p.stroke([[332, 495], [668, 495]], 5);
 };
+
+// ---------------- small props as cards ----------------
+/** a wooden ammunition crate, side-on, base on the soles line (0.9 m x 0.48 m) */
+export const crateCard = (p: Pen) => {
+  const x0 = 92, x1 = 508, y0 = 753, y1 = 975, wood = "#a5824f";
+  p.poly([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], wood, 7);
+  for (const y of [y0 + 74, y0 + 148]) p.stroke([[x0 + 4, y], [x1 - 4, y]], 4, "#6e5434");
+  for (const x of [x0 + 22, x1 - 22]) p.stroke([[x, y0 + 4], [x, y1 - 4]], 26, "#7f6038");
+  p.poly([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], null, 7);
+};
+/** a spent brass cartridge case (own small canvas) */
+export const casing = (p: Pen) => {
+  p.poly([[40, 20], [88, 20], [92, 200], [36, 200]], "#d9a63c", 8);
+  p.poly([[30, 196], [98, 196], [98, 226], [30, 226]], "#b9862a", 8);
+  p.stroke([[52, 34], [54, 186]], 8, "#f4d27a");
+};

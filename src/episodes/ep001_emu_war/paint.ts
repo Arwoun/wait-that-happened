@@ -718,3 +718,68 @@ export const chainHD = () => ctex("chainHD", 256, 1024, (g) => {
   }
 });
 
+
+// ---------------- episode 1: the Western Australian wheatbelt ----------------
+/** generic ground: base colour, soft blotches, short strokes (tufts / stalks / pebbles) */
+const ground = (key: string, base: string, light: string, dark: string, strokes: { n: number; cols: string[]; h: [number, number]; w: number }) =>
+  ctex(key, 1024, 1024, (g, r) => {
+    const S = 1024;
+    g.fillStyle = base; g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 18; i++) {
+      const x = U(r, 0, S), y = U(r, 0, S), rad = U(r, 110, 300), lt = r() > 0.5;
+      wrap2(S, S, x, y, rad * 1.4, (xx, yy) => blotch(g, xx, yy, rad, 1.4, lt ? light : dark, 0.35));
+    }
+    g.lineCap = "round"; g.lineWidth = strokes.w;
+    for (let i = 0; i < strokes.n; i++) {
+      const x = U(r, 0, S), y = U(r, 0, S), h = U(r, strokes.h[0], strokes.h[1]), lean = U(r, -3, 3);
+      g.strokeStyle = pick(r, strokes.cols);
+      wrap2(S, S, x, y, 20, (xx, yy) => { g.beginPath(); g.moveTo(xx + lean, yy - h); g.lineTo(xx, yy); g.stroke(); });
+    }
+  });
+export const wheatTopHD = () => ground("wheatTop", "#e2b44f", "246,214,120", "190,140,52",
+  { n: 2600, cols: ["rgba(250,226,140,0.55)", "rgba(176,124,40,0.5)", "rgba(235,196,96,0.6)"], h: [6, 14], w: 2.4 });
+export const stubbleHD = () => ground("stubble", "#cdb07a", "226,206,150", "170,140,90",
+  { n: 1800, cols: ["rgba(232,214,160,0.6)", "rgba(150,118,72,0.5)"], h: [4, 9], w: 2 });
+export const redDirtHD = () => ground("redDirt", "#c7774a", "222,150,104", "160,88,56",
+  { n: 700, cols: ["rgba(120,70,46,0.45)", "rgba(230,170,120,0.5)", "rgba(126,140,98,0.55)"], h: [3, 8], w: 3 });
+export const lawnHD = () => ground("lawn", "#7cab4c", "150,196,96", "86,140,52",
+  { n: 1600, cols: ["rgba(165,218,98,0.4)", "rgba(78,138,38,0.45)"], h: [6, 13], w: 2 });
+/** wheat seen from the side: dense stalks with heads, painted 1 m tall per tile */
+export const wheatSideHD = () => ctex("wheatSide", 1024, 256, (g, r) => {
+  g.fillStyle = "#c99a3e"; g.fillRect(0, 0, 1024, 256);
+  for (let i = 0; i < 900; i++) {
+    const x = U(r, 0, 1024), top = U(r, 0, 40), c = pick(r, ["#e9c76a", "#d8a948", "#b9862f", "#f0d68a"]);
+    g.strokeStyle = c; g.lineWidth = 2.2;
+    wrapX(1024, x, 4, (xx) => { g.beginPath(); g.moveTo(xx, 256); g.lineTo(xx + U(r, -3, 3), top + 18); g.stroke();
+      g.fillStyle = c; g.beginPath(); g.ellipse(xx, top + 10, 2.6, 9, 0, 0, TAU); g.fill(); });
+  }
+  const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, "rgba(255,240,190,0.25)"); gr.addColorStop(1, "rgba(90,60,20,0.35)");
+  g.fillStyle = gr; g.fillRect(0, 0, 1024, 256);
+});
+/** weatherboard wall (horizontal boards, 18 cm), cream paint */
+export const weatherboardHD = (col = "#efe3c4") => ctex("weatherboard" + col, 512, 512, (g, r) => {
+  g.fillStyle = col; g.fillRect(0, 0, 512, 512);
+  for (let y = 0; y < 512; y += 46) {
+    g.fillStyle = `rgba(120,100,70,${0.22 + 0.1 * r()})`; g.fillRect(0, y + 40, 512, 6);
+    g.fillStyle = "rgba(255,255,255,0.18)"; g.fillRect(0, y, 512, 6);
+  }
+  for (let i = 0; i < 40; i++) { g.fillStyle = "rgba(150,130,100,0.12)"; g.fillRect(U(r, 0, 512), U(r, 0, 512), U(r, 30, 120), 3); }
+});
+/** corrugated iron: vertical ribs, a little rust */
+export const corrugatedHD = (col = "#a9b0b4") => ctex("corrugated" + col, 512, 512, (g, r) => {
+  g.fillStyle = col; g.fillRect(0, 0, 512, 512);
+  for (let x = 0; x < 512; x += 16) {
+    const gr = g.createLinearGradient(x, 0, x + 16, 0);
+    gr.addColorStop(0, "rgba(255,255,255,0.28)"); gr.addColorStop(0.5, "rgba(60,64,70,0.18)"); gr.addColorStop(1, "rgba(255,255,255,0.28)");
+    g.fillStyle = gr; g.fillRect(x, 0, 16, 512);
+  }
+  for (let i = 0; i < 14; i++) blotch(g, U(r, 0, 512), U(r, 0, 512), U(r, 20, 70), 1, "160,90,50", 0.25);
+});
+export const crateHD = () => ctex("crate", 512, 512, (g, r) => {
+  g.fillStyle = "#9a7a4c"; g.fillRect(0, 0, 512, 512);
+  for (let y = 0; y < 512; y += 128) { g.fillStyle = jit(r, "#a5824f", 0.08); g.fillRect(0, y + 4, 512, 120); g.fillStyle = "rgba(60,40,24,0.7)"; g.fillRect(0, y, 512, 5); }
+  g.fillStyle = "#6e5434"; g.fillRect(0, 0, 40, 512); g.fillRect(472, 0, 40, 512);
+  g.fillStyle = "rgba(40,30,20,0.85)"; g.font = "bold 64px sans-serif"; g.fillText(".303", 170, 290);
+});
+export const canvasHD = () => ground("tentCanvas", "#d8cba6", "236,226,196", "180,166,128",
+  { n: 300, cols: ["rgba(150,136,100,0.35)"], h: [10, 30], w: 2 });

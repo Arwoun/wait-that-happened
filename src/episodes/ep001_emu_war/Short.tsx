@@ -19,6 +19,8 @@ import { LensBlur, GrainEffect } from "./lensblur";
 import { GradeEffect, GRADES, GRADE_STRENGTH, gradeFor } from "./grade";
 import { Kit } from "./build";
 import { TOTAL, FLASH_AT, SHOTS, layersAt, dofAt } from "./story";
+import { Subtitles, Word } from "../../common/Subtitles";
+import WORDS from "../../../episodes/ep001_emu_war/voice/words.json";
 
 export const BRIDGE_FRAMES = TOTAL;
 
@@ -41,7 +43,7 @@ const fwd = new THREE.Vector3(), fpt = new THREE.Vector3();
 
 const useKit = () => {
   const [kit, setKit] = useState<Kit | null>(null);
-  const [handle] = useState(() => delayRender("bridge kit"));
+  const [handle] = useState(() => delayRender("episode kit"));
   useEffect(() => { loadKit().then((k) => { setKit(k); continueRender(handle); }); }, [handle]);
   return kit;
 };
@@ -111,6 +113,7 @@ export const BridgeShort: React.FC = () => {
     <AbsoluteFill style={{ background: "#cfe3f2" }}>
       {layersAt(f).map((l, i) => <ShotView key={i ? "over" : "base"} id={l.id} kit={kit} alpha={l.alpha} />)}
       {flash > 0 && <AbsoluteFill style={{ background: "#ffffff", opacity: flash }} />}
+      {(getInputProps() as { subs?: boolean }).subs === false ? null : <Subtitles words={WORDS as Word[]} />}
     </AbsoluteFill>
   );
 };

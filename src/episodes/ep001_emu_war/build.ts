@@ -263,7 +263,7 @@ const VEG: Record<string, VegKind> = {
   tree_oak: "round", tree_default: "round", tree_detailed: "round", tree_fat: "fat", "tree-high-round": "tall", tree: "tall",
   tree_cone: "cone", plant_bushLarge: "bush", plant_bushDetailed: "bush", plant_bush: "bush", hedge: "hedge",
 };
-const LEAF = ["#5aa83c", "#4c9a37", "#69b545", "#55a243", "#3f8f3c"];
+const LEAF = ["#7f9a66", "#6f8a5c", "#8aa572", "#748f60", "#5f7a52"]; // eucalyptus grey-greens
 /** canopy paint (equal px per metre on a unit sphere: 256 around x 128 pole to pole): light crown, darker belly,
  *  soft leaf-clump dabs (kept low contrast: the two-tone sun term does the main modelling) */
 const leafTex = (i: number) => ctex("leafHD" + i, 256, 128, (g, r) => {
@@ -701,3 +701,4 @@ export const buildTown = (root: THREE.Object3D, kit: Kit, rays: Ray[] = []) => {
   b.build(root);
   sight = [];
 };
+export const setSight = (r: Ray[]) => { sight = r; };
