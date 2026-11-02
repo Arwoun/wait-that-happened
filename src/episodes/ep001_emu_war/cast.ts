@@ -350,7 +350,7 @@ export const stage = (id: number, t: number, cam: CamInfo, truck: THREE.Object3D
         emu(cam, out, 200 + i, t, x, z, drinking ? { pose: "drink", dir: [-Math.cos(a), -Math.sin(a)] } : { pose: u < 1 ? "walk" : "stand", phase: ph(r, false, i), dir: [-Math.cos(a), -Math.sin(a)] });
       }
       const jam = t >= 27.62 ? clamp01((t - 27.62) / 1.2) : 0;
-      gun(cam, out, HIDE6[0], 1.25, HIDE6[2] - 2.6, [0, -1], firing(t, 27.2, 27.62), jam);
+      gun(cam, out, HIDE6[0], 1.42, HIDE6[2] - 2.9, [0, -1], firing(t, 27.2, 27.62), jam);
       [-1.5, 0, 1.5].forEach((dx, i) => human(cam, out, 40 + i, t, HIDE6[0] + dx, HIDE6[2] + (i === 1 ? -0.2 : 0), { o: DIG[i], okey: `d${i}`, expr: t < 27.55 ? (i === 1 ? "stern" : "grin") : "shock", dir: [0, -1], side: false }));
       break;
     }
@@ -358,7 +358,7 @@ export const stage = (id: number, t: number, cam: CamInfo, truck: THREE.Object3D
       if (t < 30.85) { // parked: hammering the mount; the gunner on the tray
         const strike = (tt: number) => Math.max(0, 1 - Math.abs(t - tt) * 6);
         const hammer = Math.max(strike(29.24), strike(30.22));
-        human(cam, out, 50, t, 100.3, 1.7, { o: DIG[2], okey: "d2", expr: "stern", dir: [0, 1], side: false, prop: ["hammer", q(hammer, 6)] });
+        human(cam, out, 50, t, 99.3, 1.7, { o: DIG[2], okey: "d2", expr: "stern", dir: [0, 1], side: false, prop: ["hammer", q(hammer, 6)] });
         const g0 = onTruck(truck, -1.6, 0.92, 0);
         gun(cam, out, g0.x, g0.y + 0.1, g0.z, [1, 0]);
         human(cam, out, 51, t, g0.x - 0.8, g0.z, { o: DIG[1], okey: "d1", y: g0.y, expr: "grin", side: false, blob: false });
@@ -367,7 +367,7 @@ export const stage = (id: number, t: number, cam: CamInfo, truck: THREE.Object3D
         gun(cam, out, g0.x, g0.y + 0.1, g0.z, [1, 0], fire);
         human(cam, out, 51, t, g0.x - 0.75, g0.z + 0.05, { o: DIG[1], okey: "d1", y: g0.y + 0.05 * Math.sin(t * 23), expr: t < 32.7 ? "stern" : "pained", side: false, blob: false, tilt: 6 * Math.sin(t * 9) });
         for (let i = 0; i < 26; i++) {
-          const ex = x + 7 + hh(i, 1) * 18 + 5.4 * (t - 30.85), ez = (hh(i, 2) - 0.5) * 12;
+          const ex = x + 3 + hh(i, 1) * 9 + 5.4 * (t - 30.85), ez = (hh(i, 2) - 0.5) * 10;
           emu(cam, out, 60 + i, t, ex, ez, { pose: "run", phase: ph(ex, true, i), dir: [1, 0], expr: i % 4 ? "deadpan" : "smug" });
         }
         for (let k = 0; k < 6; k++) puff(out, x - 2.5 - k * 1.6, 1.2 * Math.sin(k), ((t * 1.6 + k / 6) % 1), 1.5);
@@ -447,7 +447,7 @@ export const stage = (id: number, t: number, cam: CamInfo, truck: THREE.Object3D
         const tt = t - CHASE2_T0 + CHASE_T0, x = truckX(tt), g0 = onTruck(truck, -1.6, 0.92, 0);
         human(cam, out, 121, t, g0.x - 0.6, g0.z, { o: DIG[1], okey: "d1", y: g0.y, expr: "shock", side: false, blob: false });
         for (let i = 0; i < 14; i++) {
-          const ex = x - 10 + hh(i, 1) * 6 + 7.5 * (t - CHASE2_T0), ez = 3 + hh(i, 2) * 4;
+          const ex = x - 6 + hh(i, 1) * 4 + 7.5 * (t - CHASE2_T0), ez = 2.5 + hh(i, 2) * 4;
           emu(cam, out, 140 + i, t, ex, ez, { pose: "run", phase: ph(ex, true, i), dir: [1, 0], expr: "smug" });
         }
       }

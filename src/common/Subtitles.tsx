@@ -33,7 +33,7 @@ export const Subtitles: React.FC<{ words: Word[]; fps?: number; offset?: number 
   return (
     <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center", pointerEvents: "none" }}>
       <div style={{
-        position: "absolute", top: "62%", width: "86%", textAlign: "center",
+        position: "absolute", top: "68%", width: "86%", textAlign: "center",
         fontFamily: "Montserrat", fontWeight: 800, fontSize: 78, lineHeight: 1.12, letterSpacing: 0.5, textTransform: "uppercase",
         transform: `scale(${0.88 + 0.12 * pop})`, opacity: 0.4 + 0.6 * pop,
       }}>

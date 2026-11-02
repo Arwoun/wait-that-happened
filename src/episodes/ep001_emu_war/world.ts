@@ -155,7 +155,8 @@ export class World {
     M.green = lam("truckGreen", () => ({ color: "#7aa262" }));
     M.black = lam("tyre", () => ({ color: "#2f2c33" }));
     M.steel = twoTone(new THREE.MeshPhongMaterial({ color: "#8b9099", specular: "#9a9a9a", shininess: 40 }), 0.2);
-    M.water = lam("damWater", () => ({ color: "#6b9fb6" }));
+    M.water = lam("damWater", () => ({ color: "#4f97ad" }));
+    M.bank = lam("damBank", () => ({ map: tex(redDirtHD()), side: THREE.DoubleSide }));
     M.mud = lam("damMud", () => ({ color: "#9a6a48" }));
 
     // ---- ground ----
@@ -187,8 +188,8 @@ export class World {
     const mud = new THREE.RingGeometry(DAM_R - 0.2, DAM_R + 1.4, 48); mud.rotateX(-Math.PI / 2);
     b.add(mud, M.mud, new THREE.Matrix4().makeTranslation(DAM[0], 0.04, DAM[2]));
     const bank = new THREE.LatheGeometry([new THREE.Vector2(DAM_R + 1.4, 0.0), new THREE.Vector2(DAM_R + 2.6, 1.15), new THREE.Vector2(DAM_R + 3.6, 1.5),
-      new THREE.Vector2(DAM_R + 4.6, 1.15), new THREE.Vector2(DAM_R + 6.0, 0.0)].reverse(), 64, 0.35 * Math.PI, 1.3 * Math.PI); // open on the north side
-    b.add(bank, M.red, new THREE.Matrix4().makeTranslation(DAM[0], 0, DAM[2]));
+      new THREE.Vector2(DAM_R + 4.6, 1.15), new THREE.Vector2(DAM_R + 6.0, 0.0)], 64, 1.4 * Math.PI, 1.2 * Math.PI); // open toward -z (north, lathe angle pi), where the emus walk in // open on the north side
+    b.add(bank, M.bank, new THREE.Matrix4().makeTranslation(DAM[0], 0, DAM[2]));
 
     // ---- farmhouse: weatherboard box, hipped iron roof, verandah, tank stand and the pump windmill ----
     {

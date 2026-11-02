@@ -125,12 +125,12 @@ const S5b = (f: number) => dolly(at(GUN5, 3.8, 1.2, -1.3), at(GUN5, -0.2, 0.95, 
 const S5c = (f: number) => zoom(at(GUN5, 0.6, 1.5, -30), at(GUN5, 0, 1.0, -70), 32, pushK(f, 650, 0.002), { roll: -0.03 });
 // shot 6: the dam; three soldiers crouch behind its south bank, the gun on the bank top
 export const HIDE6: V3 = at(DAM, 0, 0, DAM_R + 6.5);
-const S6a = (f: number) => zoom(at(DAM, 26, 28, 40), at(DAM, 0, 0, -2), 44, pushK(f, 682, 0.002));
+const S6a = (f: number) => zoom(at(DAM, 12, 14, 52), at(DAM, 0, 0, -12), 42, pushK(f, 682, 0.002));
 const S6b = (f: number) => dolly(at(HIDE6, 2.6, 1.1, 6.0), at(HIDE6, 0, 0.95, 0), pushK(f, 776, 0.0025), { fov: 38 });
 const S6c = (f: number) => dolly(at(HIDE6, 0.9, 1.75, 3.6), at(HIDE6, 0, 1.35, -1.2), pushK(f, 820, 0.0025, 0.005, 25), { fov: 40, roll: -0.04 });
 // shot 7: bolting the gun on (parked), then the chase along +x
-const S7a = (f: number) => dolly([101.0, 2.0, 9.2], [99.7, 1.4, 0.5], pushK(f, 856, 0.0015), { fov: 44 });
-const S7b = (f: number): Shot => { const x = truckX(T(f)); return { pos: [x + 5.0, 2.4, 17.5], look: [x + 6.5, 1.1, 0], fov: 46, roll: 0 }; };
+const S7a = (f: number) => dolly([99.6, 2.1, 9.8], [98.9, 1.4, 0.5], pushK(f, 856, 0.0015), { fov: 44 });
+const S7b = (f: number): Shot => { const x = truckX(T(f)); return { pos: [x + 3.0, 2.6, 26], look: [x + 3.5, 1.0, 0], fov: 42, roll: 0 }; };
 const S7c = (f: number): Shot => { const x = truckX(T(f)), b = bump(T(f)); return { pos: [x - 2.2, 2.75 + b.heave, 3.0], look: [x - 0.6, 2.15 + b.heave * 0.6, 0], fov: 40, roll: b.roll * 0.6 }; };
 // shot 8: groups, then one lookout
 export const LEADER8: V3 = [190, 0, -8];
@@ -152,7 +152,7 @@ const S11b = (f: number) => dolly(at(TANK11, 0.25, 0.42, 6.4), at(TANK11, 0, 1.3
 const S12a = (f: number) => dolly(at(PARK, 0.4, 1.3, 6.2), at(PARK, -0.6, 0.85, 0), pushK(f, 1464, 0.0018), { fov: 42 });
 export const WALL12: V3 = [250, 0, 0];
 const S12b = (f: number) => dolly(at(WALL12, 0, 0.3, 7.5), at(WALL12, 0, 2.3, 0), pushK(f, 1534, 0.002, 0.005, 30), { fov: 50 });
-const S12c = (f: number): Shot => { const x = truckX(T(f) - CHASE2_T0 + CHASE_T0); return { pos: [x + 4.5, 1.6, 13], look: [x + 6, 1.2, 0], fov: 46 }; };
+const S12c = (f: number): Shot => { const x = truckX(T(f) - CHASE2_T0 + CHASE_T0); return { pos: [x + 3.0, 2.4, 24], look: [x + 3.0, 1.0, 0], fov: 42 }; };
 // shot 13: golden camp, exhausted gunners on empty crates; then one emu and ten falling cartridge cases
 export const EMU13: V3 = [182, 0, -20];
 const S13a = (f: number) => dolly(at(CAMP, 1.0, 1.35, -6.6), at(CAMP, 1.4, 0.9, 0.2), pushK(f, 1626, 0.002), { fov: 42 });
