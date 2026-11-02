@@ -124,7 +124,7 @@ const vOf = (i: number) => (i * 7 + (i >> 2)) % 4;
 const seedOf = (i: number) => ((i * 5 + 3) % 7) + 1;
 /** drawing resolution by distance: [canvas w, h, scale from the 600 x 1000 design]; sized for the 1440 x 2560 final */
 const tier = (d: number): [number, number, number] =>
-  d < 3.2 ? [1800, 3000, 3.0] : d < 6.5 ? [1080, 1800, 1.8] : d < 16 ? [480, 800, 0.8] : [240, 400, 0.4];
+  d < 3.2 ? [1200, 2000, 2.0] : d < 6.5 ? [720, 1200, 1.2] : d < 16 ? [360, 600, 0.6] : [180, 300, 0.3]; // sized for the 1080x1920 final
 
 // ---------------- light ----------------
 const SUN = new THREE.Vector3(0.5, 0.75, -0.4).normalize();
@@ -230,7 +230,7 @@ const emu = (cam: CamInfo, out: Stage, i: number, t: number, x: number, z: numbe
   const [w, h, k] = tier(d);
   const mirror = !front && view.mirror, light = light2D(cam, mirror);
   const lid = o.lidOff ? 0 : lidAt(t, i + 100);
-  const spec = { pose: o.pose ?? "stand", phase: q(o.phase ?? 0, 8), expr: o.expr ?? "deadpan", lid, look: o.look ?? 0, light, seed: (i % 5) + 1 };
+  const spec = { pose: o.pose ?? "stand", phase: q(o.phase ?? 0, 6), expr: o.expr ?? "deadpan", lid, look: o.look ?? 0, light, seed: (i % 5) + 1 };
   out.places.push({
     key: `${front ? "EF" : "ES"}|${fkey(spec)}`, x, y, z, scale: sc, mirror, size: [w, h, k],
     draw: (p) => (front ? emuFront(p, spec) : emuSide(p, spec)),
@@ -407,9 +407,9 @@ export const stage = (id: number, t: number, cam: CamInfo, truck: THREE.Object3D
       } else {
         human(cam, out, 82, t, SOLDIER10[0], SOLDIER10[2], { o: DIG[0], okey: "d0", expr: t < 44.2 ? "grin" : "shock", dir: [0, 1], side: false });
         for (let i = 0; i < 16; i++) {
-          const a = -Math.PI * (0.15 + 0.7 * hh(i, 1)), r = 3 + hh(i, 2) * 7;
+          const a = -Math.PI * (0.12 + 0.76 * hh(i, 1)), r = 2.2 + hh(i, 2) * 4.5;
           const rise = smooth((t - 43.5 - hh(i, 3) * 0.6) / 0.35);
-          emu(cam, out, 90 + i, t, SOLDIER10[0] + Math.cos(a) * r * 1.4, SOLDIER10[2] + Math.sin(a) * r, { pose: "stand", front: true, expr: i % 3 ? "deadpan" : "smug", y: -1.7 * (1 - rise), blob: false });
+          emu(cam, out, 90 + i, t, SOLDIER10[0] + Math.cos(a) * r * 0.8, SOLDIER10[2] + Math.sin(a) * r, { pose: "stand", front: true, expr: i % 3 ? "deadpan" : "smug", y: -1.7 * (1 - rise), blob: false });
         }
       }
       break;

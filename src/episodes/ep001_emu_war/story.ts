@@ -152,7 +152,7 @@ const S11b = (f: number) => dolly(at(TANK11, 0.25, 0.42, 6.4), at(TANK11, 0, 1.3
 const S12a = (f: number) => dolly(at(PARK, 0.4, 1.3, 6.2), at(PARK, -0.6, 0.85, 0), pushK(f, 1464, 0.0018), { fov: 42 });
 export const WALL12: V3 = [250, 0, 0];
 const S12b = (f: number) => dolly(at(WALL12, 0, 0.3, 7.5), at(WALL12, 0, 2.3, 0), pushK(f, 1534, 0.002, 0.005, 30), { fov: 50 });
-const S12c = (f: number): Shot => { const x = truckX(T(f) - CHASE2_T0 + CHASE_T0); return { pos: [x + 3.0, 2.4, 24], look: [x + 3.0, 1.0, 0], fov: 42 }; };
+const S12c = (f: number): Shot => { const x = truckX(T(f) - CHASE2_T0 + CHASE_T0); return { pos: [x + 1.5, 2.4, 24], look: [x + 1.5, 1.0, 0], fov: 42 }; };
 // shot 13: golden camp, exhausted gunners on empty crates; then one emu and ten falling cartridge cases
 export const EMU13: V3 = [182, 0, -20];
 const S13a = (f: number) => dolly(at(CAMP, 1.0, 1.35, -6.6), at(CAMP, 1.4, 0.9, 0.2), pushK(f, 1626, 0.002), { fov: 42 });
@@ -253,7 +253,4 @@ export const focusAt = (id: number, f: number): V3 => { const d = dofAt(f); retu
 
 /** near framing props (Kenney names), shown only inside their own shot */
 export type Fg = { a: number; b: number; kit: string; pos: V3; s?: number; yaw?: number };
-export const FOREGROUND: Fg[] = [
-  { a: 318, b: 376, kit: "plant_bushDetailed", pos: [21.4, 0, -25.8], s: 0.9, yaw: 0.4 },
-  { a: 1464, b: 1534, kit: "plant_bushLarge", pos: [-297.6, 0, 303.2], s: 0.8, yaw: 1.1 },
-];
+export const FOREGROUND: Fg[] = []; // (Kenney foreground props read as green balls without the kit)

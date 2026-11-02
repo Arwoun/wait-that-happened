@@ -175,10 +175,10 @@ export class World {
 
     // ---- fence (posts every 3 m, three wires) with a broken gap where the emus come through ----
     for (let x = -300; x <= 300; x += 3) {
-      if (Math.abs(x) < 7) continue;
+      if (Math.abs(x) < 7 || (x > TRACK.x0 - 1 && x < TRACK.x1 + 1)) continue; // gap for the emus' break-in and a gate for the track
       b.add(boxGeo(V(x - 0.06, 0, FENCE_Z - 0.06), V(x + 0.06, 1.25, FENCE_Z + 0.06)), M.post);
     }
-    for (const y of [0.45, 0.8, 1.12]) for (const [x0, x1] of [[-300, -6], [6, 300]])
+    for (const y of [0.45, 0.8, 1.12]) for (const [x0, x1] of [[-300, -6], [6, TRACK.x0 - 1], [TRACK.x1 + 1, 300]])
       b.add(boxGeo(V(x0, y - 0.012, FENCE_Z - 0.012), V(x1, y + 0.012, FENCE_Z + 0.012)), M.wire);
     b.add(boxGeo(V(5.6, 0, FENCE_Z - 0.4), V(5.75, 0.95, FENCE_Z + 0.1)), M.post); // a leaning broken post (stays short)
 
@@ -404,7 +404,7 @@ export class World {
     else if (id === 7) this.poseTruck(truckX(t), 0, 0, t, 1, (truckX(t) - 100) / 0.42);
     else if (id === 9) this.poseTruck(100, 0, 0, 0, 0, 0);
     else if (id === 10) this.poseTruck(18.5, TRUCK10Z(t), -Math.PI / 2, t, 0.35, (TRUCK10Z(t) + 80) / 0.42);
-    else if (id === 11 || id === 13) this.poseTruck(CAMP[0] + 1, CAMP[2] + 4.5, Math.PI, 0, 0, 0);
+    else if (id === 13) this.poseTruck(CAMP[0] + 1, CAMP[2] + 4.5, Math.PI, 0, 0, 0);
     else if (id === 12 && f >= 1594) { const tt = t - CHASE2_T0 + CHASE_T0; this.poseTruck(truckX(tt), 0, 0, tt, 1, (truckX(tt) - 100) / 0.42); }
     // ---- cast + effects ----
     const right = V(0, 0, 0).setFromMatrixColumn(cam.matrixWorld, 0);
