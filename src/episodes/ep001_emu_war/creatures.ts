@@ -20,6 +20,24 @@ const qcurve = (a: P2, k: P2, b: P2, n = 16): P2[] =>
   Array.from({ length: n + 1 }, (_, i) => { const t = i / n, s = 1 - t; return [s * s * a[0] + 2 * s * t * k[0] + t * t * b[0], s * s * a[1] + 2 * s * t * k[1] + t * t * b[1]] as P2; });
 const rotP = (q: P2, a: number, c: P2): P2 => { const s = Math.sin(a), co = Math.cos(a); return [c[0] + (q[0] - c[0]) * co - (q[1] - c[1]) * s, c[1] + (q[0] - c[0]) * s + (q[1] - c[1]) * co]; };
 
+
+/** filled ribbon along a polyline with width w(t); colour switches from c0 to c1 at t = split (no seam ink) */
+const ribbon = (p: Pen, pts: P2[], w: (t: number) => number, c0: string, c1: string, split: number, ol = 9) => {
+  const n = pts.length, L: P2[] = [], R: P2[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+    const h = w(i / (n - 1)) / 2, nx = -dy / l, ny = dx / l;
+    L.push([pts[i][0] + nx * h, pts[i][1] + ny * h]); R.push([pts[i][0] - nx * h, pts[i][1] - ny * h]);
+  }
+  const k = Math.round(split * (n - 1));
+  p.poly([...L.slice(k), ...R.slice(k).reverse()], c1, 0);
+  p.poly([...L.slice(0, k + 1), ...R.slice(0, k + 1).reverse()], c0, 0);
+  // feather fringe along the colour change
+  const m = pts[k];
+  for (let j = -2; j <= 2; j++) p.stroke([[m[0] + j * w(split) * 0.18, m[1] - 2], [m[0] + j * w(split) * 0.2 + 3, m[1] - 16]], 4, c0);
+  p.stroke(L, ol); p.stroke(R, ol);
+};
+
 // ---------------- emu ----------------
 export const PLUME = "#7b6651", PLUME_SH = "#4f4036", PLUME_DK = "#3e3129";
 export const NECK = "#8ea2c2", NECK_SH = "#64779a";
@@ -102,6 +120,16 @@ export const emuSide = (p: Pen, o: EmuOpts = {}) => {
     const hip: P2 = [bx + (L.near ? 22 : -2), by + 45];
     emuLeg(p, hip, L.foot, l1, l2, L.near ? LEG : mul(LEG, [0.72, 0.72, 0.76]), L.lift);
   }
+  // neck: base at the body's front shoulder, to the head
+  const NB = rotP([bx + 122, by - 62], tilt, [bx, by]);
+  let H: P2, headRot = 0;
+  if (pose === "run") H = [bx + 285, 330 + bob * 0.5];
+  else if (down) { H = [bx + 238, pose === "drink" ? 905 : 880]; headRot = rad(62); }
+  else if (pose === "watch") H = [bx + 150, 128];
+  else H = [bx + 175 + (walk ? 10 * Math.sin(two * phase * 2) : 0), 178 + bob * 0.6];
+  const K: P2 = down ? [NB[0] + 110, NB[1] - 30] : run ? [NB[0] + 70, NB[1] - 120] : [H[0] - 30, (NB[1] + H[1]) * 0.55];
+  const neck = qcurve(NB, K, H, 24);
+  ribbon(p, neck, (t) => 78 - 44 * Math.min(1, t / 0.6), PLUME_SH, NECK, 0.52, 9);
   // body
   const body = plumage(bx, by, 172, 112, tilt, seed);
   p.shadedFill(body, PLUME, PLUME_SH, light, 172, 0.42);
@@ -112,22 +140,6 @@ export const emuSide = (p: Pen, o: EmuOpts = {}) => {
     p.arc(c0[0], c0[1], 26 * rr + 12, 14 * rr + 6, 20 + 60 * a, 120 + 60 * a, 3.5, PLUME_DK);
   }
   p.inkRing(body, 11, thick);
-  // neck: base at the body's front shoulder, to the head
-  const NB = rotP([bx + 122, by - 62], tilt, [bx, by]);
-  let H: P2, headRot = 0;
-  if (pose === "run") H = [bx + 285, 330 + bob * 0.5];
-  else if (down) { H = [bx + 238, pose === "drink" ? 905 : 880]; headRot = rad(62); }
-  else if (pose === "watch") H = [bx + 150, 128];
-  else H = [bx + 175 + (walk ? 10 * Math.sin(two * phase * 2) : 0), 178 + bob * 0.6];
-  const K: P2 = down ? [NB[0] + 110, NB[1] - 30] : run ? [NB[0] + 70, NB[1] - 120] : [H[0] - 30, (NB[1] + H[1]) * 0.55];
-  const neck = qcurve(NB, K, H, 20);
-  const low = neck.slice(0, 9), up = neck.slice(7);
-  p.line(up, NECK, 34);
-  p.line(low, PLUME_SH, 52);
-  p.line(low.slice(0, 5), PLUME, 46, false);
-  // throat ruff tufts where feathers meet skin
-  const ruff = low[low.length - 1];
-  for (let i = -2; i <= 2; i++) p.stroke([[ruff[0] + i * 7, ruff[1] - 4], [ruff[0] + i * 9 + 4, ruff[1] + 14]], 4, PLUME_DK);
   // head (rotated as a whole when pecking)
   const save = p.rot;
   p.rot = headRot ? [headRot, H[0], H[1]] : null;
@@ -135,14 +147,14 @@ export const emuSide = (p: Pen, o: EmuOpts = {}) => {
   const tuft: P2[] = [[hx - 30, hy - 14], [hx - 22, hy - 44], [hx - 10, hy - 30], [hx - 2, hy - 50], [hx + 8, hy - 30], [hx + 20, hy - 38], [hx + 22, hy - 16]];
   if (expr === "alarm") tuft.splice(1, 5, [hx - 26, hy - 62], [hx - 10, hy - 36], [hx - 2, hy - 70], [hx + 8, hy - 36], [hx + 22, hy - 58]);
   p.poly(tuft, PLUME_DK, 4);
-  const head = ell(hx, hy, 42, 33);
-  p.shadedFill(head, NECK, NECK_SH, light, 42, 0.4);
+  const head = ell(hx, hy, 50, 40);
+  p.shadedFill(head, NECK, NECK_SH, light, 50, 0.4);
   p.inkRing(head, 7, thick);
-  const beak: P2[] = [[hx + 28, hy - 6], [hx + 62, hy - 2], [hx + 86, hy + 8], [hx + 60, hy + 14], [hx + 26, hy + 13]];
+  const beak: P2[] = [[hx + 36, hy - 6], [hx + 70, hy - 2], [hx + 96, hy + 9], [hx + 68, hy + 16], [hx + 34, hy + 15]];
   p.poly(beak, "#4b4642", 5);
-  p.stroke([[hx + 30, hy + 5], [hx + 76, hy + 8]], 3);
+  p.stroke([[hx + 38, hy + 6], [hx + 86, hy + 9]], 3);
   if (expr === "smug" || expr === "proud") p.arc(hx + 24, hy + 8, 9, 8, 20, 120, 3.5); // beak-corner smirk
-  emuEye(p, hx + 6, hy - 6, expr, lid, look, NECK);
+  emuEye(p, hx + 10, hy - 8, expr, lid, look, NECK);
   p.rot = save;
 };
 
@@ -158,6 +170,9 @@ export const emuFront = (p: Pen, o: EmuOpts = {}) => {
     p.line([hip, [bx + s * 74, 790 - lift * 0.5], foot], s < 0 ? mul(LEG, [0.8, 0.8, 0.84]) : LEG, 26);
     for (const a of [-60, 0, 60]) p.line([foot, [foot[0] + 22 * Math.sin(rad(a)) + s * 4, foot[1] + 14]], LEG, 11);
   }
+  const H: P2 = [bx + look * 6, tall ? 150 : 200 + bob];
+  const neck = qcurve([bx, by - 40], [H[0], (by - 40 + H[1]) / 2], H, 20);
+  ribbon(p, neck, (t) => 92 - 52 * Math.min(1, t / 0.6), PLUME_SH, NECK, 0.5, 9);
   const body = plumage(bx, by, 150, 128, 0, seed);
   p.shadedFill(body, PLUME, PLUME_SH, light, 150, 0.42);
   for (let i = 0; i < 8; i++) {
@@ -165,10 +180,6 @@ export const emuFront = (p: Pen, o: EmuOpts = {}) => {
     p.arc(cx, cy, 22, 12, 30, 150, 3.5, PLUME_DK);
   }
   p.inkRing(body, 11, thick);
-  const H: P2 = [bx + look * 6, tall ? 150 : 200 + bob];
-  const neck: P2[] = [[bx, by - 90], [H[0], (by - 90 + H[1]) / 2], H];
-  p.line(neck, NECK, 36);
-  p.line(neck.slice(0, 2), PLUME_SH, 54);
   const tuft: P2[] = [[H[0] - 30, H[1] - 18], [H[0] - 16, H[1] - (expr === "alarm" ? 66 : 48)], [H[0] - 4, H[1] - 30], [H[0] + 6, H[1] - (expr === "alarm" ? 72 : 52)],
     [H[0] + 16, H[1] - 30], [H[0] + 28, H[1] - (expr === "alarm" ? 62 : 42)], [H[0] + 32, H[1] - 16]];
   p.poly(tuft, PLUME_DK, 4);

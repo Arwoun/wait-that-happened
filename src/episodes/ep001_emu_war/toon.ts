@@ -55,6 +55,15 @@ export const OFFICER: Outfit = { ...RIFLEMAN, hat: "shako_tall", buttons: "#e8c4
 export const KID: Outfit = { jacket: "#f08a2c", pants: "#3b5b9a", boots: "#f4f1ea", hat: "cap", cap: "#e2453c", build: "kid" };
 export const PARENT: Outfit = { jacket: "#7b5ac9", pants: "#3b3f52", boots: "#5a3b2a", hat: "hair", hair: "#5a3b2a" };
 export const SKINS = [SKIN, "#f5c9a0", "#ecd0b6", "#c99067"];
+/** 1932 Australian gunners: khaki tunic and breeches, puttee-brown boots, slouch hat */
+export const DIGGER: Outfit = { jacket: "#9b8a5a", pants: "#857650", boots: "#4a3322", hat: "slouch", cap: "#a89466", belt: "#c9b27a", buttons: "#c9a64a" };
+export const MAJOR: Outfit = { ...DIGGER, jacket: "#8d7d52", hat: "slouch", cap: "#9a865a", moustache: "#5a4030", build: "stout", buttons: "#e8c45a", belt: "#7a5232", sash: undefined };
+export const farmer = (v = 0): Outfit => {
+  const shirts = ["#6f8fb0", "#b5653f", "#d8cfae", "#7d9a5a"];
+  return { jacket: shirts[v % 4], pants: ["#5a4a3a", "#4a4f5e", "#6b5a3c"][v % 3], boots: "#4a3426", hat: "slouch", cap: ["#8a6a45", "#6e6152", "#a08460"][v % 3],
+    skin: SKINS[(v + 1) % 4], moustache: v % 2 ? "#6a4a30" : undefined };
+};
+export const digger = (v = 0, extra: Partial<Outfit> = {}): Outfit => ({ ...DIGGER, skin: SKINS[v % 4], moustache: v % 3 === 1 ? "#4a3426" : undefined, ...extra });
 
 export const soldier = (v = 0, extra: Partial<Outfit> = {}): Outfit => {
   const o: Outfit = { ...RIFLEMAN, skin: SKINS[v % 4] };
@@ -403,6 +412,25 @@ const hatOn = (p: Pen, o: Outfit, hp: P2[], H: Blob, cx: number, hc: number, lig
         const s = facing || (rnd(seed, 21) < 0.5 ? -1 : 1), [px, py] = R([[cx + s * 4 * u, cut + 1.5 * u]])[0];
         p.ell(px, py, 32 * u, 0.06 * HH, shade(col, 0.8), ow, 0, 180, deg);
       }
+    }
+  } else if (o.hat === "slouch") {
+    // Australian slouch hat: dome crown with a dark band, wide brim, the wearer's left side pinned up
+    const col = o.cap ?? "#9c8a5e", bandC = mul(col, [0.6, 0.55, 0.5]);
+    const yb = crown + 0.26 * HH, ht = 0.38 * HH, wb = 0.34 * W, wt = 0.27 * W, deg = (a * 180) / Math.PI;
+    const [bx, by] = R([[cx + (side ? 4 * u : 0), yb + 1 * u]])[0];
+    if (side) p.ell(bx, by, 0.66 * W, 0.05 * HH, shade(col, 0.88), ow, 0, 360, deg);
+    else p.ell(bx, by, 0.6 * W, 0.075 * HH, shade(col, 0.88), ow, 0, 360, deg);
+    const dome = R([...sag(yb, wb).reverse(), [cx - wt, yb - 0.75 * ht], [cx - 0.55 * wt, yb - ht], [cx + 0.55 * wt, yb - ht], [cx + wt, yb - 0.75 * ht]]);
+    p.shadedFill(dome, col, mul(col, SH_FELT), light, wt, 0.4);
+    p.clip(dome, () => p.band(R([[cx - wb - 4 * u, yb - 0.08 * HH], [cx + wb + 4 * u, yb - 0.08 * HH]]), bandC, 0.1 * HH, 0.8 * u));
+    p.poly(dome, null, ow);
+    p.stroke(R([[cx - 0.3 * wt, yb - ht + 3 * u], [cx, yb - ht + 9 * u], [cx + 0.3 * wt, yb - ht + 3 * u]]), 1.6 * u); // crease
+    if (!side) {
+      const flap = R([[cx + 0.38 * W, yb + 2 * u], [cx + 0.62 * W, yb - 0.02 * HH], [cx + 0.5 * W, yb - 0.3 * HH], [cx + 0.3 * W, yb - 0.24 * HH]]);
+      p.shadedFill(flap, col, mul(col, SH_FELT), light, 0.2 * W, 0.4);
+      p.poly(flap, null, ow);
+      const [rx, ry] = R([[cx + 0.4 * W, yb - 0.12 * HH]])[0];
+      p.ell(rx, ry, 5 * u, 5 * u, "#c9a64a", 1.6 * u); // rising-sun badge stand-in: a plain brass button
     }
   } else if (o.hat === "tophat") {
     const yb = crown + 0.22 * HH, ht = 0.8 * HH, wb = 0.31 * W, wt = 0.33 * W, col = "#2e2a36";
