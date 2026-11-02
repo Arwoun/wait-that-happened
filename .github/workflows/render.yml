@@ -40,7 +40,7 @@ jobs:
           PY
       - uses: actions/cache@v4
         id: kc
-        with: { path: public/kenney, key: kenney-v1 }
+        with: { path: public/kenney, key: kenney-v2 }
       - name: Kenney kits (CC0)
         if: steps.kc.outputs.cache-hit != 'true'
         run: bash tools/fetch_kenney.sh
@@ -58,7 +58,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - uses: actions/cache/restore@v4
-        with: { path: public/kenney, key: kenney-v1 }
+        with: { path: public/kenney, key: kenney-v2 }
       - run: npm ci --no-audit --no-fund || npm i --no-audit --no-fund
       - name: Select episode
         run: echo "export { Short, FRAMES } from \"./$EP\";" > src/episodes/current.ts
