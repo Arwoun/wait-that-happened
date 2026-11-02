@@ -47,8 +47,8 @@ def synth(text, voice):
 def main():
     script = json.load(open(sys.argv[1], encoding="utf-8"))
     text = "\n\n".join(b["vo"] for b in script["beats"])
-    style = script.get("style", "Read this like a calm, deadpan storyteller narrating a funny true story: steady tone, clear, unhurried, no shouting.")
-    text = style + "\n\n## Transcript:\n" + text
+    style = script.get("style", "in a calm, dry, deadpan documentary voice, at a brisk and lively pace")
+    text = f"Read aloud {style}:\n\n{text}"
     voice = script.get("voice", "Bodi")
     for attempt in range(4):
         try:

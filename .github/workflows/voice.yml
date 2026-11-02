@@ -46,8 +46,9 @@ jobs:
             [ -z "$ep" ] && continue
             d="episodes/$ep"; mkdir -p "$d/voice"
             python tools/tts.py "$d/script.json" /tmp/raw.wav
-            # 48 kHz mono 16-bit, trim leading silence to 0.15 s, keep the end
-            ffmpeg -y -loglevel error -i /tmp/raw.wav -af "silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.15,aresample=48000" -ac 1 -c:a pcm_s16le "$d/voice/voice.wav"
+            python tools/align.py "$d/script.json" /tmp/raw.wav /tmp/words_raw.json
+            maxs=$(python -c "import json;print(json.load(open('$d/script.json')).get('max_seconds',70))")
+            python tools/voice_post.py /tmp/raw.wav /tmp/words_raw.json "$d/voice/voice.wav" "$maxs"
             python tools/align.py "$d/script.json" "$d/voice/voice.wav" "$d/voice/words.json"
             ffprobe -v error -show_entries format=duration -of csv=p=0 "$d/voice/voice.wav"
           done < list.txt
