@@ -161,17 +161,20 @@ export class World {
 
     // ---- ground ----
     const b = new Batch();
-    b.add(quadUp(-1000, 1000, -1000, 1000, 250, 250, 0), M.red); // outback everywhere
-    b.add(quadUp(-400, 400, FENCE_Z, 400, 100, 115, 0.01), M.stubble); // the farm side of the fence
+    // outback (red) and farm (stubble) tile the ground without overlapping: no depth fighting at a distance
+    b.add(quadUp(-1000, 1000, -1000, FENCE_Z, 250, 117.5, 0), M.red);
+    b.add(quadUp(-1000, -400, FENCE_Z, 1000, 75, 132.5, 0), M.red);
+    b.add(quadUp(400, 1000, FENCE_Z, 1000, 75, 132.5, 0), M.red);
+    b.add(quadUp(-400, 400, FENCE_Z, 1000, 100, 132.5, 0), M.stubble);
     for (const [x0, x1, z0, z1] of WHEAT_RECTS) {
       const h = WHEAT_H;
       b.add(quadUp(x0, x1, z0, z1, (x1 - x0) / 4, (z1 - z0) / 4, h), M.wheatTop);
       const sides: [THREE.Vector3, THREE.Vector3][] = [[V(x0, 0, z0), V(x1, 0, z0)], [V(x1, 0, z0), V(x1, 0, z1)], [V(x1, 0, z1), V(x0, 0, z1)], [V(x0, 0, z1), V(x0, 0, z0)]];
       for (const [a, c] of sides) b.add(quad(a, c, c.clone().setY(h), a.clone().setY(h), a.distanceTo(c), 1), M.wheatSide);
     }
-    b.add(quadUp(PARK[0] - 30, PARK[0] + 30, PARK[2] - 30, PARK[2] + 30, 15, 15, 0.02), M.lawn);
-    b.add(quadUp(PARK[0] - 1.2, PARK[0] + 1.2, PARK[2] - 30, PARK[2] + 30, 1, 25, 0.03), M.paving);
-    b.add(quadUp(MONUMENT[0] - 20, MONUMENT[0] + 20, MONUMENT[2] - 6, MONUMENT[2] + 30, 10, 9, 0.02), M.paving);
+    b.add(quadUp(PARK[0] - 30, PARK[0] + 30, PARK[2] - 30, PARK[2] + 30, 15, 15, 0.05), M.lawn);
+    b.add(quadUp(PARK[0] - 1.2, PARK[0] + 1.2, PARK[2] - 30, PARK[2] + 30, 1, 25, 0.1), M.paving);
+    b.add(quadUp(MONUMENT[0] - 20, MONUMENT[0] + 20, MONUMENT[2] - 6, MONUMENT[2] + 30, 10, 9, 0.08), M.paving);
 
     // ---- fence (posts every 3 m, three wires) with a broken gap where the emus come through ----
     for (let x = -300; x <= 300; x += 3) {

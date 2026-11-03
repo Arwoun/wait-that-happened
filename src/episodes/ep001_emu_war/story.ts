@@ -100,8 +100,8 @@ const zoom = (pos: V3, look: V3, fov: number, k: number, rest: Partial<Cam> = {}
 // shot 1: the gunner sits at HOOK (paddock) facing -z, the emu stands 8 m ahead
 export const HOOK: V3 = [120, 0, 20];
 export const S1_EMU: V3 = at(HOOK, 0.7, 0, -8);
-const S1a = (f: number) => dolly(at(HOOK, 0.6, 1.55, 3.9), at(HOOK, 0.45, 1.0, -3.5), pushK(f, 0, 0.0022), { fov: 42 });
-const S1b = (f: number) => dolly(at(HOOK, 0.4, 1.55, 2.6), at(HOOK, 0.6, 1.2, -5.5), pushK(f, 52, 0.0015), { fov: 38, roll: -0.035 });
+const S1a = (f: number) => dolly(at(HOOK, -0.1, 1.6, 4.4), at(HOOK, 0.35, 1.0, -3.5), pushK(f, 0, 0.0018), { fov: 42 });
+const S1b = (f: number) => dolly(at(HOOK, -0.2, 1.6, 3.0), at(HOOK, 0.6, 1.2, -5.5), pushK(f, 52, 0.0012), { fov: 38, roll: -0.035 });
 const S1c = (f: number) => dolly(at(HOOK, 1.05, 1.5, -4.6), at(HOOK, 0.7, 1.52, -8), pushK(f, 85, 0.002, 0.006, 30), { fov: 34, roll: 0.03 });
 // shot 2: the stream of emus through the fence gap into the wheat
 const S2a = (f: number) => zoom([42, 30, -18], [0, 0, -112], 46, pushK(f, 124, 0.002));
@@ -131,10 +131,10 @@ const S6c = (f: number) => dolly(at(HIDE6, 0.9, 1.75, 3.6), at(HIDE6, 0, 1.35, -
 // shot 7: bolting the gun on (parked), then the chase along +x
 const S7a = (f: number) => dolly([99.6, 2.1, 9.8], [98.9, 1.4, 0.5], pushK(f, 856, 0.0015), { fov: 44 });
 const S7b = (f: number): Shot => { const x = truckX(T(f)); return { pos: [x + 3.0, 2.6, 26], look: [x + 3.5, 1.0, 0], fov: 42, roll: 0 }; };
-const S7c = (f: number): Shot => { const x = truckX(T(f)), b = bump(T(f)); return { pos: [x - 2.2, 2.75 + b.heave, 3.0], look: [x - 0.6, 2.15 + b.heave * 0.6, 0], fov: 40, roll: b.roll * 0.6 }; };
+const S7c = (f: number): Shot => { const x = truckX(T(f)), b = bump(T(f)); return { pos: [x - 4.4, 2.9 + b.heave, 3.6], look: [x - 2.1, 1.95 + b.heave * 0.6, 0], fov: 42, roll: b.roll * 0.6 }; };
 // shot 8: groups, then one lookout
 export const LEADER8: V3 = [190, 0, -8];
-const S8a = (f: number) => zoom([150, 46, 64], [185, 0, -12], 46, pushK(f, 1062, 0.002));
+const S8a = (f: number) => zoom([178, 20, 52], [192, 0, -6], 44, pushK(f, 1062, 0.002));
 const S8b = (f: number) => dolly(at(LEADER8, 0.35, 1.75, 3.4), at(LEADER8, 0, 1.85, 0), pushK(f, 1122, 0.002, 0.005, 30), { fov: 34 });
 // shot 9: golden retreat to the truck (parked at 100, 0, 0)
 const S9a = (f: number) => dolly([107.5, 1.9, 16], [106.2, 1.1, 2.5], pushK(f, 1166, 0.0018), { fov: 42 });
