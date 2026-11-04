@@ -4,11 +4,11 @@
 // the sun, painted crescent in the drawing); standing ones get a soft multiply contact blob. Effects are unlit cards.
 // Cards, effects and blobs live on the NOINK layer so the world ink pass never outlines their quads.
 import * as THREE from "three";
-import { Pen, bodyFront, bodySide, digger, farmer, MAJOR, fxBurst, fxPuff, fxShadow, fxContact, Outfit, Expr, FrontOpts, SideOpts } from "./toon";
-import { emuSide, emuFront, lewisGun, pigeon, kangaroo, crateCard, casing, EmuPose, EmuExpr } from "./creatures";
+import { Pen, bodyFront, bodySide, fxBurst, fxPuff, fxShadow, fxContact, fxStars, Outfit, Expr, FrontOpts, SideOpts, OSTEN, PFUNGST, expert, berliner, SCIENTIST, HANDLER, FRIEND_A, FRIEND_B } from "./toon";
+import { horseSide, horseFront, blackboard, dogSide, suitcases, computer, HorseExpr, BoardKind, HORSE_SCALE, HORSE_X0 } from "./creatures";
 import {
-  FPS, SHOTS, V3, smooth, clamp01, at, HOOK, S1_EMU, FARMER3, SOLDIERS4, CRATE_GUNS, AMMO, GUN5, DAM, DAM_R, HIDE6, LEADER8, SOLDIER10, TRUCK10Z,
-  MAJOR11, TANK11, PARK, WALL12, EMU13, CAMP, MAILBOX, MONUMENT, FENCE_Z, truckX, CHASE_T0, CHASE2_T0,
+  FPS, SHOTS, V3, smooth, clamp01, at, HANS, BOARD, OSTEN0, ROW_Z, expertPos, PFUNGST0, ASKER, PARK, SCI1, SCI2, DOG, BAGS, HANDLER0, DESK, USER,
+  tapLift, tapsBefore, TAPS, expertWalkX, pfungstX, crowdZ, PROF7, OSTEN11, PF11,
 } from "./story";
 import { LIGHTS } from "./lights";
 import { NOINK } from "./ink";
@@ -118,7 +118,6 @@ export type CamInfo = { pos: THREE.Vector3; right: THREE.Vector3; sun?: THREE.Ve
 
 const hh = (i: number, s = 0) => { const v = Math.sin(i * 127.1 + s * 311.7) * 43758.5453; return v - Math.floor(v); };
 const q = (v: number, n = 120) => Math.round(v * n) / n;
-const DIG = [0, 1, 2, 3].map((v) => digger(v));
 const vOf = (i: number) => (i * 7 + (i >> 2)) % 4;
 /** head-shape seed: 7 shapes, so marching soldiers in step still share canvases */
 const seedOf = (i: number) => ((i * 5 + 3) % 7) + 1;
@@ -217,54 +216,26 @@ const blob = (out: Stage, x: number, y: number, z: number, sc = 1, k = 1) => {
     w: 0.52 * sc, h: 0.4 * sc, flat: true, rot });
 };
 
-// ---------------- episode 1 staging ----------------
 export type Stage = { places: Place[]; fx: FxPlace[] };
 
-/** one emu: side view while it walks across the lens, front view when it comes at (or stands facing) the camera */
-type EmuSpec = { pose?: EmuPose; phase?: number; expr?: EmuExpr; dir?: [number, number]; front?: boolean; look?: number; y?: number; scale?: number; blob?: boolean; lidOff?: boolean };
-const emu = (cam: CamInfo, out: Stage, i: number, t: number, x: number, z: number, o: EmuSpec = {}) => {
-  const [dx, dz] = o.dir ?? [0, 1], y = o.y ?? 0, sc = o.scale ?? 1;
-  const view = viewOf(cam, x, z, dx, dz);
-  const front = o.front ?? !view.side;
-  const d = cam.pos.distanceTo(tmp.set(x, y + 1.2, z)) / sc;
-  const [w, h, k] = tier(d);
-  const mirror = !front && view.mirror, light = light2D(cam, mirror);
-  const lid = o.lidOff ? 0 : lidAt(t, i + 100);
-  const spec = { pose: o.pose ?? "stand", phase: q(o.phase ?? 0, 6), expr: o.expr ?? "deadpan", lid, look: o.look ?? 0, light, seed: (i % 5) + 1 };
-  out.places.push({
-    key: `${front ? "EF" : "ES"}|${fkey(spec)}`, x, y, z, scale: sc, mirror, size: [w, h, k],
-    draw: (p) => (front ? emuFront(p, spec) : emuSide(p, spec)),
-  });
-  if (o.blob !== false && y > -0.05) blob(out, x, y, z, 1.1 * sc);
-};
 /** walk phase from distance travelled: one cycle per stride (walk 1.0 m, run 3.9 m) */
 const ph = (dist: number, run = false, i = 0) => (((dist / (run ? 3.9 : 1.0) + hh(i, 2)) % 1) + 1) % 1;
 
 /** a person (front or side) standing / walking / sitting */
-type PSpec = { o: Outfit; okey: string; expr?: Expr; mode?: "stand" | "march" | "stroll" | "sit"; dir?: [number, number]; phase?: number; y?: number; side?: boolean; prop?: FrontOpts["prop"]; tilt?: number; scale?: number; blob?: boolean };
+type PSpec = { o: Outfit; okey: string; expr?: Expr; mode?: "stand" | "march" | "stroll" | "sit"; dir?: [number, number]; phase?: number; y?: number; side?: boolean; prop?: FrontOpts["prop"]; tilt?: number; scale?: number; blob?: boolean;
+  wave?: number; headTilt?: number; look?: number; push?: { pose: number; hand: [number, number] } };
 const who = (i: number, o: Outfit, okey: string): Who => ({ i, o, okey });
 const human = (cam: CamInfo, out: Stage, i: number, t: number, x: number, z: number, s: PSpec) => {
   const [dx, dz] = s.dir ?? [0, 1], y = s.y ?? 0, mode = s.mode ?? "stand";
   const v = viewOf(cam, x, z, dx, dz);
   const view = s.side === undefined ? (mode === "sit" ? { side: false, mirror: false } : v) : { side: s.side, mirror: v.mirror };
   const blink = lidAt(t, i);
-  const fo: FrontOpts = { phase: s.phase ?? 0, expr: s.expr ?? "neutral", mode, blink, prop: s.prop ?? null, tilt: s.tilt ?? 0 };
-  const so: SideOpts = { phase: s.phase ?? 0, expr: s.expr ?? "neutral", mode: mode === "march" || mode === "stroll" ? "march" : "stand", blink, stride: mode === "stroll" ? 0.6 * v.fs : v.fs };
+  const fo: FrontOpts = { phase: s.phase ?? 0, expr: s.expr ?? "neutral", mode, blink, prop: s.prop ?? null, tilt: s.tilt ?? 0, headTilt: s.headTilt ?? 0, look: s.look ?? 0,
+    ...(s.wave !== undefined ? { wave: q(s.wave, 8) } : {}) };
+  const so: SideOpts = s.push ? { expr: s.expr ?? "neutral", mode: "push", pose: q(s.push.pose, 12), hand: [q(s.push.hand[0], 0.5), q(s.push.hand[1], 0.5)], blink }
+    : { phase: s.phase ?? 0, expr: s.expr ?? "neutral", mode: mode === "march" || mode === "stroll" ? "march" : "stand", blink, stride: mode === "stroll" ? 0.6 * v.fs : v.fs };
   out.places.push(person(cam, who(i, s.o, s.okey), x, y, z, view, fo, so, s.scale ?? 1));
   if (s.blob !== false && mode !== "sit") blob(out, x, y, z, s.scale ?? 1);
-};
-/** the Lewis gun as a side-on card (muzzle toward dir); fire 0..1 flash, jam 0..1 smoke */
-const gun = (cam: CamInfo, out: Stage, x: number, y: number, z: number, dir: [number, number], fire = 0, jam = 0, sc = 1) => {
-  const v = viewOf(cam, x, z, dir[0], dir[1]);
-  const d = cam.pos.distanceTo(tmp.set(x, y + 0.6, z));
-  const [w, h, k] = tier(d);
-  out.places.push({ key: `GUN|${q(fire, 6)}|${q(jam, 10)}|${v.mirror}`, x, y, z, scale: sc, mirror: v.mirror, size: [w, h, k], draw: (p) => lewisGun(p, { fire: q(fire, 6), jam: q(jam, 10) }) });
-};
-const crate = (cam: CamInfo, out: Stage, x: number, y: number, z: number) => {
-  const d = cam.pos.distanceTo(tmp.set(x, y + 0.3, z));
-  const [w, h, k] = tier(d);
-  out.places.push({ key: "CRATE", x, y, z, size: [w, h, k], draw: crateCard });
-  blob(out, x, y, z, 1.2);
 };
 const puff = (out: Stage, x: number, z: number, u: number, s = 1) => {
   if (u < 0 || u >= 1) return;
@@ -274,225 +245,205 @@ const flash = (out: Stage, x: number, y: number, z: number, u: number, s = 0.5) 
   if (u < 0 || u >= 1) return;
   out.fx.push({ key: `burst${q(u, 20)}`, cw: 500, ch: 500, draw: (p) => fxBurst(p, q(u, 20)), x, y, z, w: s, h: s });
 };
-/** firing bursts: on for 2 frames of every 3 inside [t0, t1] */
-const firing = (t: number, t0: number, t1: number) => (t >= t0 && t < t1 && Math.floor(t * FPS) % 3 !== 2 ? 0.4 + 0.6 * hh(Math.floor(t * FPS), 5) : 0);
-/** a point on the truck (local metres) in world space */
-const onTruck = (truck: THREE.Object3D, lx: number, ly: number, lz: number) => { truck.updateMatrixWorld(true); return tmp.set(lx, ly, lz).applyMatrix4(truck.matrixWorld).clone(); };
 
-const EMU_N = 220;
-/** shot 2: the stream from the outback, funnelled through the fence gap, spreading into the wheat */
-const stream = (cam: CamInfo, out: Stage, t: number) => {
-  for (let i = 0; i < EMU_N; i++) {
-    const z0 = -230 + (i / EMU_N) * 200 + hh(i, 1) * 3, z = z0 + 1.4 * (t - 4.3);
-    if (z > -28) continue;
-    const funnel = z < FENCE_Z ? 1 - 0.85 * smooth((z + 125) / 60) : 0.15 + 0.85 * smooth((z - FENCE_Z) / 22);
-    const x = (hh(i, 3) - 0.5) * 70 * funnel + Math.sin(t * 0.7 + i) * 0.3;
-    const peck = z > -45 && hh(i, 4) < 0.35;
-    emu(cam, out, i, t, x, z, { pose: peck ? "peck" : "walk", phase: ph(z, false, i), dir: [0, 1] });
+
+// ---------------- episode 2 staging ----------------
+/** Hans: side view (facing +x unless dir says otherwise) or front; card at twice the people's scale */
+type HSpec = { expr?: HorseExpr; tap?: number; look?: number; blinders?: boolean; front?: boolean; dir?: [number, number]; headDown?: number; lidOff?: boolean };
+const horse = (cam: CamInfo, out: Stage, t: number, x: number, z: number, o: HSpec = {}) => {
+  const [dx, dz] = o.dir ?? [1, 0], view = viewOf(cam, x, z, dx, dz), front = o.front ?? false;
+  const d = cam.pos.distanceTo(tmp.set(x, 1.6, z)) / HORSE_SCALE, [w, h, k] = tier(d);
+  const mirror = !front && view.mirror, light = light2D(cam, mirror);
+  const spec = { expr: o.expr ?? "deadpan", tap: q(o.tap ?? 0, 10), look: q(o.look ?? 0, 4), blinders: !!o.blinders, lid: o.lidOff ? 0 : lidAt(t, 77), headDown: q(o.headDown ?? 0, 10), light };
+  const cx = front ? x : x + HORSE_X0 * (dx >= 0 ? 1 : -1);
+  out.places.push({ key: `${front ? "HF" : "HS"}|${fkey(spec)}`, x: cx, y: 0, z, scale: HORSE_SCALE, mirror, size: [w, h, k], draw: (p) => (front ? horseFront(p, spec) : horseSide(p, spec)) });
+  if (front) blob(out, x, 0, z, 1.6); else { blob(out, x - 0.6, 0, z + 0.02, 1.5); blob(out, x + 0.45, 0, z - 0.02, 1.5); }
+};
+const board = (cam: CamInfo, out: Stage, kind: BoardKind, tally = 0) => {
+  const d = cam.pos.distanceTo(tmp.set(BOARD[0], 1.3, BOARD[2])), [w, h, k] = tier(d);
+  out.places.push({ key: `BOARD|${kind}|${tally}`, x: BOARD[0], y: 0, z: BOARD[2], size: [w, h, k], draw: (p) => blackboard(p, kind, tally) });
+  blob(out, BOARD[0], 0, BOARD[2], 1.6, 0.8);
+};
+const card = (cam: CamInfo, out: Stage, key: string, x: number, z: number, draw: (p: Pen) => void, scale = 1, mirror = false) => {
+  const d = cam.pos.distanceTo(tmp.set(x, 1.0, z)) / scale, [w, h, k] = tier(d);
+  out.places.push({ key, x, y: 0, z, scale, mirror, size: [w, h, k], draw });
+};
+/** the thirteen experts; expr per index */
+const row = (cam: CamInfo, out: Stage, t: number, ex: (i: number) => Expr, prop?: (i: number) => FrontOpts["prop"]) => {
+  for (let i = 0; i < 13; i++) { const [x, , z] = expertPos(i); human(cam, out, 200 + i, t, x, z, { o: expert(i), okey: `x${i}`, expr: ex(i), side: false, prop: prop?.(i) ?? null }); }
+};
+/** the crowd's places in the yard (behind the row and along the sides) */
+const CROWD_N = 26;
+const crowdSpot = (i: number): [number, number] => {
+  if (i < 14) return [-2.6 + (i % 7) * 0.95 + Math.floor(i / 7) * 0.45, -8.0 - Math.floor(i / 7) * 0.9 - (i % 2) * 0.25];
+  const k = i - 14, s = k % 2 ? 1 : -1;
+  return [0.6 + s * (3.4 + (k % 3) * 0.7), -2.8 - Math.floor(k / 2) * 1.0];
+};
+const crowd = (cam: CamInfo, out: Stage, t: number, exprOf: (i: number) => Expr = (i) => (i % 3 ? "smile" : "grin"), arriving = false) => {
+  for (let i = 0; i < CROWD_N; i++) {
+    const [xs, zs] = crowdSpot(i);
+    if (!arriving) { human(cam, out, 300 + i, t, xs, zs, { o: berliner(i), okey: `c${i}`, expr: exprOf(i), side: false }); continue; }
+    const z = Math.min(zs, crowdZ(i, t)), walking = z < zs - 0.01;
+    const u = clamp01((z + 13) / 5), x = 0.3 + (xs - 0.3) * (0.35 + 0.65 * u); // through the gate, then spread out
+    human(cam, out, 300 + i, t, x, z, walking ? { o: berliner(i), okey: `c${i}`, expr: "grin", mode: "march", phase: ((z / 0.8) % 1 + 1) % 1, dir: [0, 1] } : { o: berliner(i), okey: `c${i}`, expr: exprOf(i), side: false });
   }
 };
-/** grazers in an area (pecking / slow walking), for backgrounds */
-const grazers = (cam: CamInfo, out: Stage, t: number, n: number, cx: number, cz: number, rx: number, rz: number, seed = 0, y = 0) => {
-  for (let i = 0; i < n; i++) {
-    const k = i + seed * 37, x = cx + (hh(k, 6) - 0.5) * 2 * rx, z = cz + (hh(k, 7) - 0.5) * 2 * rz;
-    const peck = ((t * 0.35 + hh(k, 8)) % 1) < 0.55;
-    const dir: [number, number] = hh(k, 9) < 0.5 ? [1, 0.2] : [-1, 0.3];
-    const walkX = peck ? 0 : 0.3 * ((t * 0.35 + hh(k, 8)) % 1);
-    emu(cam, out, k, t, x + dir[0] * walkX, z, { pose: peck ? "peck" : "walk", phase: ph(walkX * 3, false, k), dir, y });
-  }
+const tapPuff = (out: Stage, t: number, x: number, z: number, t0: number, t1: number) => {
+  for (const ts of TAPS) if (ts >= t0 && ts <= t1) puff(out, x, z, (t - ts) / 0.5, 0.45);
+};
+const stars = (out: Stage, x: number, y: number, z: number, u: number, s = 0.9) => {
+  if (u < 0 || u >= 1) return;
+  out.fx.push({ key: `stars${q(u, 20)}`, cw: 420, ch: 240, draw: (p) => fxStars(p, q(u, 20)), x, y, z, w: s, h: s * 0.57 });
 };
 
-export const stage = (id: number, t: number, cam: CamInfo, truck: THREE.Object3D): Stage => {
+export const stage = (id: number, t: number, cam: CamInfo): Stage => {
   const out: Stage = { places: [], fx: [] };
   const s = SHOTS[id - 1], f = Math.round(t * FPS);
   LNAME = s.light;
   findSun(cam, SUN);
+  const [hx, , hz] = HANS, hoof = hx + 0.5;
   switch (id) {
-    case 1: { // one gunner behind a gun on a crate, one emu. "And lost."
-      crate(cam, out, HOOK[0], 0, HOOK[2] - 0.9);
-      gun(cam, out, HOOK[0], 0.48, HOOK[2] - 0.9, [0, -1], firing(t, 2.2, 2.75));
-      human(cam, out, 0, t, HOOK[0] - 0.5, HOOK[2] - 0.2, { o: DIG[0], okey: "d0", expr: t < 2.9 ? "stern" : "pained", dir: [0, -1] });
-      emu(cam, out, 1, t, S1_EMU[0], S1_EMU[2], { pose: "stand", front: true, expr: t < 2.85 ? "deadpan" : "smug" });
-      grazers(cam, out, t, 6, HOOK[0] - 6, HOOK[2] - 40, 25, 10, 1);
+    case 1: {
+      if (f < 140) {
+        horse(cam, out, t, hx, hz, { expr: "focus", tap: tapLift(t), look: 0.5 });
+        board(cam, out, "sum", tapsBefore(t, 0, 3));
+        tapPuff(out, t, hoof, hz + 0.1, 0, 3);
+        row(cam, out, t, (i) => (t < 4.0 ? (i % 3 ? "stern" : "neutral") : i % 2 ? "shock" : "grin"), (i) => (i === 2 || i === 9 ? "clipboard" : null));
+        crowd(cam, out, t, () => "smile");
+      } else horse(cam, out, t, hx, hz, { front: true, expr: "proud" });
       break;
     }
-    case 2: stream(cam, out, t); break;
-    case 3: {
-      human(cam, out, 2, t, FARMER3[0], FARMER3[2], { o: farmer(0), okey: "f0", expr: t < 12.6 ? "stern" : "pained", dir: [0, 1], side: false });
-      grazers(cam, out, t, 18, FARMER3[0] - 2, FARMER3[2] - 12, 12, 7, 2);
+    case 2: {
+      horse(cam, out, t, hx, hz, { expr: "focus", look: 0.6 });
+      board(cam, out, "sum");
+      human(cam, out, 10, t, OSTEN0[0], OSTEN0[2], { o: OSTEN, okey: "osten", expr: f < 268 ? "neutral" : "stern", side: false, prop: "pointer" });
       break;
     }
-    case 4: {
-      SOLDIERS4.forEach(([x, , z], i) => human(cam, out, 10 + i, t, x, z, { o: DIG[(i + 1) % 4], okey: `d${(i + 1) % 4}`, expr: f < 500 ? "stern" : "shock", dir: [0, -1], side: false }));
-      gun(cam, out, CRATE_GUNS[0] - 0.32, 0.62, CRATE_GUNS[2], [1, 0], 0, 0, 0.8);
-      gun(cam, out, CRATE_GUNS[0] + 0.32, 0.62, CRATE_GUNS[2] + 0.05, [1, 0], 0, 0, 0.8);
-      if (f >= 500) human(cam, out, 13, t, AMMO[0] - 2.2, AMMO[2] + 0.6, { o: DIG[3], okey: "d3", expr: "shock", dir: [0, -1], side: false });
+    case 3: case 4: {
+      const kind: BoardKind = id === 3 ? "sum" : t < 15.1 ? "sum" : t < 16.1 ? "frac" : t < 16.76 ? "clock" : "name";
+      horse(cam, out, t, hx, hz, { expr: id === 3 && f >= 414 ? "proud" : "focus", tap: tapLift(t), look: 0.6 });
+      board(cam, out, kind, id === 3 ? tapsBefore(t, 12, 14) : kind === "sum" ? 5 : 0);
+      tapPuff(out, t, hoof, hz + 0.1, 12, 18);
+      human(cam, out, 10, t, OSTEN0[0], OSTEN0[2], { o: OSTEN, okey: "osten", expr: id === 3 && f >= 414 ? "smile" : "stern", side: false, prop: "pointer" });
       break;
     }
-    case 5: { // day one: the gunner fires, the dust falls short, fifty emus jog off
-      crate(cam, out, GUN5[0], 0, GUN5[2] - 0.9);
-      const fire = firing(t, 19.9, 22.6);
-      gun(cam, out, GUN5[0], 0.48, GUN5[2] - 0.9, [0, -1], fire);
-      human(cam, out, 20, t, GUN5[0] - 0.5, GUN5[2] - 0.2, { o: DIG[1], okey: "d1", expr: t < 21.0 ? "stern" : "nervous", dir: [0, -1] });
-      for (let i = 0; i < 50; i++) {
-        const jog = Math.max(0, t - 21.5), z = GUN5[2] - 60 - hh(i, 1) * 12 - 3.2 * jog, x = GUN5[0] + (hh(i, 2) - 0.5) * 34;
-        emu(cam, out, 30 + i, t, x, z, jog > 0 ? { pose: "run", phase: ph(3.2 * jog, true, i), dir: [0, -1] } : { pose: hh(i, 3) < 0.5 ? "peck" : "stand", dir: [hh(i, 4) - 0.5, 1] });
+    case 5: {
+      horse(cam, out, t, hx, hz, { expr: "proud", look: 0.3 });
+      board(cam, out, "name");
+      crowd(cam, out, t, (i) => (i % 3 ? "smile" : "grin"), true);
+      const coin = t > 20.0;
+      human(cam, out, 10, t, OSTEN0[0], OSTEN0[2], { o: OSTEN, okey: "osten", expr: t < 20.9 ? "stern" : "smile", side: false, ...(coin ? { wave: 0.5 + 0.5 * Math.sin((t - 20) * 14) } : { prop: "pointer" as const }) });
+      if (f >= 598) human(cam, out, 11, t, 3.95, -1.75, { o: berliner(0), okey: "c0", expr: t < 20.9 ? "smile" : "nervous", side: false, prop: "coin" });
+      break;
+    }
+    case 6: {
+      horse(cam, out, t, hx, hz, { expr: "deadpan", look: -0.5 });
+      board(cam, out, "name");
+      crowd(cam, out, t, () => "smile");
+      for (let i = 0; i < 13; i++) {
+        const [xe, , ze] = expertPos(i), x = expertWalkX(i, t), walking = x < xe - 0.01;
+        const named = ([[1, 23.6], [3, 23.9], [4, 24.76], [5, 25.56], [6, 26.48]] as [number, number][]).find(([k]) => k === i);
+        const ex: Expr = named && t >= named[1] ? "grin" : "stern";
+        human(cam, out, 200 + i, t, x, ze, walking ? { o: expert(i), okey: `x${i}`, expr: "stern", mode: "march", phase: ((x / 0.8) % 1 + 1) % 1, dir: [1, 0] }
+          : { o: expert(i), okey: `x${i}`, expr: ex, side: false, prop: i === 2 ? "clipboard" : null });
       }
-      for (let k = 0; k < 14; k++) { const t0 = 19.95 + k * 0.19; puff(out, GUN5[0] + (hh(k, 9) - 0.5) * 22, GUN5[2] - 44 - hh(k, 10) * 8, (t - t0) / 0.9, 1.6); }
-      break;
-    }
-    case 6: { // the dam: emus walk in and drink; three hidden gunners; the jam
-      for (let i = 0; i < 150; i++) {
-        const a = Math.PI * (1.15 + 0.7 * hh(i, 1)), rEnd = DAM_R + 0.6 + hh(i, 2) * 4;
-        const arrive = 24.2 + hh(i, 3) * 2.5, u = clamp01((t - arrive + 6) / 6);
-        const r = rEnd + (1 - u) * 45, x = DAM[0] + Math.cos(a) * r, z = DAM[2] + Math.sin(a) * r;
-        const drinking = u >= 1 && hh(i, 4) < 0.6;
-        emu(cam, out, 200 + i, t, x, z, drinking ? { pose: "drink", dir: [-Math.cos(a), -Math.sin(a)] } : { pose: u < 1 ? "walk" : "stand", phase: ph(r, false, i), dir: [-Math.cos(a), -Math.sin(a)] });
-      }
-      const jam = t >= 27.62 ? clamp01((t - 27.62) / 1.2) : 0;
-      gun(cam, out, HIDE6[0], 1.42, HIDE6[2] - 2.9, [0, -1], firing(t, 27.2, 27.62), jam);
-      [-1.5, 0, 1.5].forEach((dx, i) => human(cam, out, 40 + i, t, HIDE6[0] + dx, HIDE6[2] + (i === 1 ? -0.2 : 0), { o: DIG[i], okey: `d${i}`, expr: t < 27.55 ? (i === 1 ? "stern" : "grin") : "shock", dir: [0, -1], side: false }));
       break;
     }
     case 7: {
-      if (t < 30.85) { // parked: hammering the mount; the gunner on the tray
-        const strike = (tt: number) => Math.max(0, 1 - Math.abs(t - tt) * 6);
-        const hammer = Math.max(strike(29.24), strike(30.22));
-        human(cam, out, 50, t, 99.3, 1.7, { o: DIG[2], okey: "d2", expr: "stern", dir: [0, 1], side: false, prop: ["hammer", q(hammer, 6)] });
-        const g0 = onTruck(truck, -1.6, 0.92, 0);
-        gun(cam, out, g0.x, g0.y + 0.1, g0.z, [1, 0]);
-        human(cam, out, 51, t, g0.x - 0.8, g0.z, { o: DIG[1], okey: "d1", y: g0.y, expr: "grin", side: false, blob: false });
-      } else { // the chase
-        const x = truckX(t), g0 = onTruck(truck, -1.6, 0.92, 0), fire = firing(t, 31.2, 35.4);
-        gun(cam, out, g0.x, g0.y + 0.1, g0.z, [1, 0], fire);
-        human(cam, out, 51, t, g0.x - 0.75, g0.z + 0.05, { o: DIG[1], okey: "d1", y: g0.y + 0.05 * Math.sin(t * 23), expr: t < 32.7 ? "stern" : "pained", side: false, blob: false, tilt: 6 * Math.sin(t * 9) });
-        for (let i = 0; i < 26; i++) {
-          const ex = x + 3 + hh(i, 1) * 9 + 5.4 * (t - 30.85), ez = (hh(i, 2) - 0.5) * 10;
-          emu(cam, out, 60 + i, t, ex, ez, { pose: "run", phase: ph(ex, true, i), dir: [1, 0], expr: i % 4 ? "deadpan" : "smug" });
-        }
-        for (let k = 0; k < 6; k++) puff(out, x - 2.5 - k * 1.6, 1.2 * Math.sin(k), ((t * 1.6 + k / 6) % 1), 1.5);
+      for (let i = 0; i < 13; i++) {
+        const [x, , z] = i === 9 ? PROF7 : expertPos(i);
+        human(cam, out, 200 + i, t, x, z, { o: expert(i), okey: `x${i}`, expr: i === 9 ? (t < 29.7 ? "neutral" : "smile_closed") : t < 29.7 ? "stern" : "grin", side: false,
+          prop: i === 9 ? "paper" : i === 2 || i === 11 ? "clipboard" : null });
       }
+      crowd(cam, out, t, () => "smile");
       break;
     }
-    case 8: { // small groups, a lookout each
-      for (let g = 0; g < 12; g++) {
-        const gx = 140 + hh(g, 1) * 110, gz = -50 + hh(g, 2) * 80;
-        for (let i = 0; i < 6; i++) {
-          const k = 300 + g * 6 + i;
-          if (i === 0) { emu(cam, out, k, t, gx, gz, { pose: "watch", dir: [Math.sin(t * 2 + g), 1], expr: "deadpan" }); continue; }
-          const a = (i / 5) * 6.28 + g, x = gx + Math.cos(a) * 2.2, z = gz + Math.sin(a) * 2.2;
-          emu(cam, out, k, t, x, z, { pose: hh(k, 3) < 0.6 ? "peck" : "stand", dir: [Math.cos(a + 1.6), Math.sin(a + 1.6)] });
-        }
-      }
-      if (f >= 1122) {
-        const look = Math.round(Math.sin((t - 37.4) * 3.2) * 1.4) / 1.4;
-        emu(cam, out, 400, t, LEADER8[0], LEADER8[2], { pose: "watch", front: true, expr: "deadpan", look, lidOff: true });
-        grazers(cam, out, t, 5, LEADER8[0], LEADER8[2] - 4, 3, 2, 8);
-      }
+    case 8: {
+      horse(cam, out, t, hx, hz, { expr: "deadpan", look: 0.6 });
+      board(cam, out, "q");
+      row(cam, out, t, (i) => (i % 2 ? "neutral" : "stern"));
+      crowd(cam, out, t, () => "neutral");
+      const x = pfungstX(t), walking = x > PFUNGST0[0] + 0.01;
+      human(cam, out, 12, t, x, PFUNGST0[2], walking ? { o: PFUNGST, okey: "pf", expr: "neutral", mode: "march", phase: ((x / 0.8) % 1 + 1) % 1, dir: [-1, 0] }
+        : { o: PFUNGST, okey: "pf", expr: t < 34.0 ? "neutral" : "nervous", side: false, prop: "notebook", headTilt: t < 34 ? 0 : -6 });
       break;
     }
-    case 9: { // golden retreat
-      [0, 1, 2].forEach((i) => {
-        const x = 109 - 1.1 * (t - 38.8) + i * 1.3, z = 2.4 + (i % 2) * 0.8;
-        human(cam, out, 70 + i, t, x, z, { o: DIG[i], okey: `d${i}`, mode: "march", phase: ((x / 0.8) % 1 + 1) % 1, dir: [-1, 0], expr: i === 1 ? "pained" : "nervous" });
-      });
-      grazers(cam, out, t, 10, 112, -14, 14, 4, 9);
+    case 9: {
+      const blind = f >= 1216;
+      horse(cam, out, t, hx, hz, { expr: blind ? (t < 41.4 ? "focus" : "dazed") : t < 38.3 ? "focus" : "proud", tap: tapLift(t), look: 0.6, blinders: blind });
+      board(cam, out, "sum", blind ? 0 : tapsBefore(t, 36, 39));
+      tapPuff(out, t, hoof, hz + 0.1, 36, 43);
+      human(cam, out, 13, t, ASKER[0], ASKER[2], { o: expert(0), okey: "x0", expr: blind ? (t < 41.4 ? "nervous" : "shock") : t < 38.25 ? "stern" : "grin", side: false });
+      if (!blind) row(cam, out, t, () => (t < 38.3 ? "neutral" : "grin"));
+      else row(cam, out, t, (i) => (i % 2 ? "nervous" : "shock"));
       break;
     }
     case 10: {
-      if (f < 1300) {
-        const g0 = onTruck(truck, -1.6, 0.92, 0), g1 = onTruck(truck, -1.6, 0.92, 0.6);
-        human(cam, out, 80, t, g0.x, g0.z, { o: DIG[0], okey: "d0", y: g0.y, expr: "grin", side: false, blob: false });
-        human(cam, out, 81, t, g1.x, g1.z, { o: DIG[2], okey: "d2", y: g1.y, expr: "stern", side: false, blob: false });
+      if (f < 1347 || f >= 1481) {
+        const stopped = f >= 1481;
+        horse(cam, out, t, hx, hz, { expr: stopped ? "proud" : "focus", look: 1, tap: stopped ? 0 : tapLift(t) });
+        board(cam, out, "sum", stopped ? 5 : 0);
+        human(cam, out, 13, t, ASKER[0], ASKER[2], { o: expert(0), okey: "x0", expr: stopped ? "relief" : "nervous", side: false });
+        if (stopped) row(cam, out, t, (i) => (i % 2 ? "relief" : "smile"));
       } else {
-        human(cam, out, 82, t, SOLDIER10[0], SOLDIER10[2], { o: DIG[0], okey: "d0", expr: t < 44.2 ? "grin" : "shock", dir: [0, 1], side: false });
-        for (let i = 0; i < 16; i++) {
-          const a = -Math.PI * (0.12 + 0.76 * hh(i, 1)), r = 2.2 + hh(i, 2) * 4.5;
-          const rise = smooth((t - 43.5 - hh(i, 3) * 0.6) / 0.35);
-          emu(cam, out, 90 + i, t, SOLDIER10[0] + Math.cos(a) * r * 0.8, SOLDIER10[2] + Math.sin(a) * r, { pose: "stand", front: true, expr: i % 3 ? "deadpan" : "smug", y: -1.7 * (1 - rise), blob: false });
-        }
+        const tense = smooth((t - 44.9) / 3.0), relax = t >= 48.62;
+        human(cam, out, 13, t, ASKER[0], ASKER[2], { o: expert(0), okey: "x0", expr: relax ? "relief" : t < 46.5 ? "neutral" : "nervous", side: false,
+          tilt: relax ? 0 : -5 * tense, headTilt: relax ? 0 : -4 * tense });
+        board(cam, out, "sum");
+        row(cam, out, t, () => (relax ? "relief" : "nervous"));
       }
       break;
     }
     case 11: {
-      if (f < 1418) {
-        human(cam, out, 110, t, MAJOR11[0], MAJOR11[2], { o: MAJOR, okey: "major", expr: "stern", dir: [0, 1], side: false });
-        const ex = MAJOR11[0] - 4 + 1.1 * (t - 45.4);
-        emu(cam, out, 111, t, ex, MAJOR11[2] - 3.2, { pose: "walk", phase: ph(ex, false, 1), dir: [1, 0], expr: "smug" });
-      } else {
-        const z = TANK11[2] + 0.9 * (t - 47.3);
-        emu(cam, out, 112, t, TANK11[0], z, { pose: "walk", front: true, phase: ph(z, false, 2), dir: [0, 1], expr: "deadpan" });
-        for (let k = 0; k < 7; k++) {
-          const u = ((t * 1.7 + k / 7) % 1);
-          flash(out, TANK11[0] + (hh(k, 1) - 0.5) * 7, 0.5 + hh(k, 2), TANK11[2] - 3 - hh(k, 3) * 4, u, 0.7);
-          puff(out, TANK11[0] + (hh(k, 4) - 0.5) * 5, TANK11[2] - 1 - hh(k, 5) * 3, ((t * 1.2 + k / 7) % 1), 1.0);
-        }
-      }
+      horse(cam, out, t, hx, hz, { expr: "deadpan", look: 0.4 });
+      board(cam, out, "sum", 5);
+      const late = f >= 1561;
+      human(cam, out, 10, t, OSTEN11[0], OSTEN11[2], { o: OSTEN, okey: "osten", expr: late ? "stern" : "smile", side: false, prop: late ? "crossed" : null, headTilt: late ? 8 : 0 });
+      human(cam, out, 12, t, PF11[0], PF11[2], { o: PFUNGST, okey: "pf", expr: late ? "nervous" : "smile", side: false, prop: "notebook" });
+      row(cam, out, t, () => "neutral");
       break;
     }
     case 12: {
-      if (f < 1534) { // park: a digger on leave lunges at a pigeon, it hops off
-        const lunge = smooth((t - 49.2) / 0.5), px = PARK[0] - 1.6 + 1.2 * lunge;
-        human(cam, out, 120, t, px, PARK[2] + 0.2, { o: DIG[3], okey: "d3", mode: "march", phase: q(((t * 2) % 1), 8), dir: [1, 0], expr: lunge > 0.5 ? "shock" : "grin" });
-        const hop = clamp01((t - 49.6) / 0.8), pgx = PARK[0] + 0.3 + 0.9 * hop, pgy = 0.9 * Math.sin(Math.PI * Math.min(1, hop * 1.2)) * (hop < 1 ? 1 : 0);
-        const flap = hop > 0 && hop < 1 ? q(((t * 6) % 1), 4) : 0;
-        out.places.push({ key: `PIG|${flap}|${q(1 - hop > 0.99 ? (t % 1 < 0.5 ? 0.3 : 0) : 0, 4)}`, x: pgx, y: pgy, z: PARK[2] + 0.4, scale: 0.28, size: [480, 800, 0.8],
-          draw: (p) => pigeon(p, { flap, peck: hop === 0 && t % 1 < 0.5 ? 0.3 : 0 }) });
-      } else if (f < 1594) { // twenty thousand of them, six feet tall
-        for (let i = 0; i < 60; i++) {
-          const row = Math.floor(i / 8), x = WALL12[0] + ((i % 8) - 3.5) * 1.35 + (row % 2) * 0.6, z = WALL12[2] - row * 1.6 + 0.6 * (t - 51.2);
-          emu(cam, out, 130 + i, t, x, z, { pose: "walk", front: true, phase: ph(z, false, i), dir: [0, 1], expr: i % 5 ? "deadpan" : "smug" });
-        }
-      } else { // and they outrun your truck
-        const tt = t - CHASE2_T0 + CHASE_T0, x = truckX(tt), g0 = onTruck(truck, -1.6, 0.92, 0);
-        human(cam, out, 121, t, g0.x - 0.6, g0.z, { o: DIG[1], okey: "d1", y: g0.y, expr: "shock", side: false, blob: false });
-        for (let i = 0; i < 14; i++) {
-          const ex = x - 6 + hh(i, 1) * 4 + 7.5 * (t - CHASE2_T0), ez = 2.5 + hh(i, 2) * 4;
-          emu(cam, out, 140 + i, t, ex, ez, { pose: "run", phase: ph(ex, true, i), dir: [1, 0], expr: "smug" });
-        }
-      }
+      const [px, , pz] = PARK, lit = t >= 57.32;
+      human(cam, out, 20, t, px + 0.5, pz - 0.35, { o: FRIEND_B, okey: "fb", expr: lit ? "laugh" : "neutral", side: false, prop: "cards" });
+      human(cam, out, 21, t, px - 0.45, pz + 0.1, { o: FRIEND_A, okey: "fa", expr: lit ? "grin" : "smile", side: false, prop: t > 55.6 ? "point" : null });
+      if (lit) stars(out, px + 0.5, 2.05, pz - 0.3, (t - 57.32) / 1.2, 0.7);
       break;
     }
     case 13: {
-      if (f < 1754) { // a month later: on the ground among the empty crates
-        [[-0.2, 0.4], [1.3, -0.3], [2.6, 0.5]].forEach(([dx, dz], i) => human(cam, out, 150 + i, t, CAMP[0] + dx, CAMP[2] + dz, { o: DIG[i], okey: `d${i}`, mode: "sit", expr: i === 1 ? "dazed" : "pained" }));
-        for (let k = 0; k < 40; k++) {
-          const x = CAMP[0] + (hh(k, 1) - 0.3) * 4, z = CAMP[2] - 1.5 + hh(k, 2) * 2;
-          out.fx.push({ key: "case", cw: 128, ch: 240, draw: casing, x, y: 0.02, z, w: 0.05, h: 0.1, flat: true, rot: hh(k, 3) * 6 });
-        }
-      } else { // one emu; ten cases fall around it
-        emu(cam, out, 160, t, EMU13[0], EMU13[2], { pose: "stand", front: true, expr: "deadpan" });
-        for (let k = 0; k < 10; k++) {
-          const t0 = 58.7 + k * 0.075, u = t - t0;
-          if (u < 0) continue;
-          const x = EMU13[0] + (hh(k, 1) - 0.5) * 1.6, z = EMU13[2] + 0.3 + hh(k, 2) * 0.9;
-          const y = Math.max(0.05, 2.6 - 4.9 * u * u * 2.2), landed = y <= 0.05;
-          out.fx.push({ key: "case", cw: 128, ch: 240, draw: casing, x, y: landed ? 0.03 : y, z, w: 0.07, h: 0.13, flat: landed, rot: landed ? hh(k, 3) * 6 : u * 9 });
-        }
-      }
+      human(cam, out, 30, t, SCI1[0], SCI1[2], { o: SCIENTIST, okey: "sci", expr: "neutral", side: false, prop: "clipboard" });
+      human(cam, out, 31, t, SCI2[0], SCI2[2], { o: { ...SCIENTIST, skin: "#f5c9a0", hair: "#c9a050", glasses: false }, okey: "sci2", expr: "neutral", side: false, prop: "clipboard" });
       break;
     }
     case 14: {
-      if (f < 1934) {
-        human(cam, out, 170, t, MAILBOX[0] - 0.6, MAILBOX[2] + 0.4, { o: farmer(1), okey: "f1", expr: t < 61.3 ? "neutral" : t < 64.8 ? "nervous" : "pained", dir: [0, -1], side: false });
-        grazers(cam, out, t, 8, MAILBOX[0] - 3, MAILBOX[2] + 10, 9, 4, 11);
+      if (f < 1944) {
+        const sn = q(0.5 + 0.5 * Math.sin(t * 7), 6), tl = q(Math.sin(t * 11), 4);
+        card(cam, out, `DOG|${sn}|${tl}`, DOG[0], DOG[2], (p) => dogSide(p, { sniff: 0.55 + 0.45 * sn, tail: 0.5 + 0.5 * tl }), 0.964);
+        blob(out, DOG[0], 0, DOG[2], 1.2);
+        card(cam, out, "BAGS", BAGS[0], BAGS[2], suitcases);
+        human(cam, out, 32, t, HANDLER0[0], HANDLER0[2], { o: HANDLER, okey: "hd", expr: t < 63.3 ? "neutral" : "nervous", side: false });
       } else {
-        human(cam, out, 171, t, MAILBOX[0] - 0.6, MAILBOX[2] + 0.4, { o: farmer(1), okey: "f1", expr: "pained", dir: [0, -1], side: false });
-        for (let i = 0; i < 10; i++) {
-          const ex = MAILBOX[0] + 8 - 1.3 * (t - 64.5) - i * 1.7, ez = MAILBOX[2] - 5 + hh(i, 1) * 2;
-          emu(cam, out, 180 + i, t, ex, ez, { pose: "walk", phase: ph(ex, false, i), dir: [-1, 0] });
-        }
+        const look = q(smooth((t - 64.9) / 0.4), 4);
+        card(cam, out, `PC|${look}`, DESK[0], DESK[2], (p) => computer(p, { look }));
+        human(cam, out, 33, t, USER[0], USER[2], { o: FRIEND_A, okey: "fa", expr: t < 65.3 ? "neutral" : "smile", side: false });
       }
       break;
     }
-    case 15: { // today: the emu (left) and a kangaroo (right) on their plinths in front of the emblem
-      emu(cam, out, 190, t, MONUMENT[0] - 3, MONUMENT[2] + 0.8, { pose: "stand", front: true, expr: "proud", y: 1.0, blob: false });
-      const d = cam.pos.distanceTo(tmp.set(MONUMENT[0] + 3, 2.2, MONUMENT[2] + 0.8)), [w, h, k] = tier(d);
-      out.places.push({ key: "ROO", x: MONUMENT[0] + 3, y: 1.0, z: MONUMENT[2] + 0.8, mirror: true, scale: 0.95, size: [w, h, k], draw: (p) => kangaroo(p) });
+    case 15: {
+      if (f < 2029) {
+        horse(cam, out, t, hx, hz, { expr: "focus", tap: t < 67.0 ? 0.55 + 0.1 * Math.sin(t * 9) : 0, look: 0.6 });
+        board(cam, out, "sum", 0);
+      } else {
+        horse(cam, out, t, hx, hz, { front: true, expr: t >= 69.2 ? "wink" : "proud" });
+        row(cam, out, t, (i) => (i % 3 === 0 ? "shock" : i % 3 === 1 ? "nervous" : "pained"));
+        crowd(cam, out, t, () => "shock");
+        board(cam, out, "sum", 5);
+      }
       break;
     }
   }
-  void at; void DAM; void TRUCK10Z; void bodySide; void bodyFront; void fxShadow; void fxContact; void LIGHTS; void hexOf; void TAIL;
+  void at; void bodySide; void bodyFront; void fxShadow; void fxContact; void LIGHTS; void hexOf; void TAIL; void fxBurst; void flash; void ROW_Z; void vOf; void ph; void SKIN_UNUSED;
   return out;
 };
+const SKIN_UNUSED = 0;
 export { FPS };

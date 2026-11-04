@@ -1,23 +1,21 @@
-// Episode 1 world: the Western Australian wheatbelt in 1932 as one three.js scene. Red outback beyond a wire fence,
-// golden wheat with a stubble track, an open paddock, a farm dam, a weatherboard farmhouse with a pump windmill,
-// the army camp (tent, crates, a 1930s truck), a little town park corner and a sandstone monument for "today".
+// Episode 2 world: a Berlin courtyard in 1904 (cobbles, four rows of plastered tenement houses, a gate to the street),
+// the town around it for the aerial, a little park lawn for the card-trick analogy and a lab room for "today".
 // update(id, f, camera) poses everything for shot `id` at frame f (pure function of id + f).
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { staticFile } from "remotion";
-import { Batch, boxGeo, V, lam, Kit, Ray, kitClone, prop, quad, setSight } from "./build";
+import { Batch, boxGeo, V, lam, Kit, Ray, kitClone, prop, quad, setSight, house } from "./build";
 import {
-  ctex, rep, beam, stoneHD, cloudHD, wheatTopHD, wheatSideHD, stubbleHD, redDirtHD, lawnHD, weatherboardHD, corrugatedHD, crateHD, canvasHD, cobbleHD,
+  ctex, rep, stoneHD, cloudHD, lawnHD, cobbleHD,
 } from "./paint";
 import { Pen } from "./toon";
-import { emblem } from "./creatures";
+import { horseFront } from "./creatures";
 import { LIGHTS, LOOK, LightPreset } from "./lights";
 import { TONE, CHAR, twoTone, untone } from "./shade";
 import { NOINK } from "./ink";
 import { Pool, Actor, Fx, stage } from "./cast";
 import {
-  FPS, SHOTS, camAt, V3, ShotDef, FOREGROUND, WHEAT_RECTS, WHEAT_H, TRACK, FENCE_Z, DAM, DAM_R, CAMP, HOUSE, MAILBOX, PARK, MONUMENT,
-  CRATE_GUNS, AMMO, truckX, bump, CHASE_T0, CHASE2_T0, TRUCK10Z,
+  FPS, SHOTS, camAt, V3, ShotDef, FOREGROUND, COURT, PARK, LAB_ROOM, PANEL,
 } from "./story";
 
 // ---------------- assets ----------------
@@ -86,9 +84,6 @@ export class World {
   private cloudMaps: Record<"day" | "golden", THREE.Texture[]>;
   private clouds: THREE.Mesh[] = [];
   private fgs: { o: THREE.Object3D; a: number; b: number }[] = [];
-  private truck = new THREE.Group(); private truckWheels: THREE.Object3D[] = [];
-  private fan = new THREE.Group();
-  private ammoStack = new THREE.Group(); private emptyCrates = new THREE.Group();
   private frustum = new THREE.Frustum();
   private m4 = new THREE.Matrix4(); private v = new THREE.Vector3(); private sph = new THREE.Sphere();
 
@@ -134,179 +129,72 @@ export class World {
 
     // ---- materials ----
     const tex = (t: THREE.Texture) => { t.anisotropy = 16; t.needsUpdate = true; return t; };
-    M.red = lam("redDirt", () => ({ map: tex(redDirtHD()) }));
-    M.stubble = lam("stubble", () => ({ map: tex(stubbleHD()) }));
-    M.wheatTop = lam("wheatTop", () => ({ map: tex(wheatTopHD()) }));
-    M.wheatSide = lam("wheatSide", () => ({ map: tex(wheatSideHD()), side: THREE.DoubleSide }));
     M.lawn = lam("lawn", () => ({ map: tex(lawnHD()) }));
     M.paving = lam("paving", () => ({ map: tex(cobbleHD()) }));
-    M.sand = lam("sandstone", () => ({ map: stoneHD("sandstoneHD", ["#e6c79a", "#dcbb8c", "#ecd2aa", "#d4b282"], "#b89468") }));
-    M.board = lam("weatherboard", () => ({ map: weatherboardHD() }));
-    M.iron = lam("corrugated", () => ({ map: corrugatedHD() }));
-    M.ironRed = lam("corrugatedRed", () => ({ map: corrugatedHD("#b0563f") }));
-    M.wood = lam("wood", () => ({ map: beam() }));
-    M.post = lam("post", () => ({ color: "#7a5a3c" }));
-    M.wire = twoTone(new THREE.MeshLambertMaterial({ color: "#6d6a66" }), 0.2);
-    M.crate = lam("crate", () => ({ map: crateHD() }));
-    M.canvas = lam("tentCanvas", () => ({ map: canvasHD() }));
-    M.dark = lam("darkOpening", () => ({ color: "#3a3446" }));
-    M.window = lam("window", () => ({ color: "#7f95c4" }));
-    M.trim = lam("trim", () => ({ color: "#f4efe4" }));
-    M.green = lam("truckGreen", () => ({ color: "#7aa262" }));
-    M.black = lam("tyre", () => ({ color: "#2f2c33" }));
-    M.steel = twoTone(new THREE.MeshPhongMaterial({ color: "#8b9099", specular: "#9a9a9a", shininess: 40 }), 0.2);
-    M.water = lam("damWater", () => ({ color: "#4f97ad" }));
-    M.bank = lam("damBank", () => ({ map: tex(redDirtHD()), side: THREE.DoubleSide }));
-    M.mud = lam("damMud", () => ({ color: "#9a6a48" }));
+    M.tiles = lam("labTiles", () => ({ map: stoneHD("labTilesHD", ["#d8cdb8", "#d2c6b0", "#ddd3bf", "#cfc3ac"], "#b3a68f") }));
+    M.plaster = lam("labWall", () => ({ color: "#f0cf98" }));
+    M.skirting = lam("labSkirt", () => ({ color: "#8a6a4a" }));
+    M.panel = lam("panel", () => ({ color: "#6f8fb8" }));
+    M.frame = lam("frame", () => ({ color: "#5a4030" }));
+    M.window = lam("window", () => ({ color: "#86a6d6" }));
+    M.wood = lam("wood", () => ({ color: "#9a6a3e" }));
+    M.iron = lam("iron", () => ({ color: "#3a3640" }));
 
-    // ---- ground ----
+    // ---- ground: cobbles (town), lawn (park), lab tiles; tiled side by side, never overlapping ----
     const b = new Batch();
-    // outback (red) and farm (stubble) tile the ground without overlapping: no depth fighting at a distance
-    b.add(quadUp(-1000, 1000, -1000, FENCE_Z, 250, 117.5, 0), M.red);
-    b.add(quadUp(-1000, -400, FENCE_Z, 1000, 75, 132.5, 0), M.red);
-    b.add(quadUp(400, 1000, FENCE_Z, 1000, 75, 132.5, 0), M.red);
-    b.add(quadUp(-400, 400, FENCE_Z, 1000, 100, 132.5, 0), M.stubble);
-    for (const [x0, x1, z0, z1] of WHEAT_RECTS) {
-      const h = WHEAT_H;
-      b.add(quadUp(x0, x1, z0, z1, (x1 - x0) / 4, (z1 - z0) / 4, h), M.wheatTop);
-      const sides: [THREE.Vector3, THREE.Vector3][] = [[V(x0, 0, z0), V(x1, 0, z0)], [V(x1, 0, z0), V(x1, 0, z1)], [V(x1, 0, z1), V(x0, 0, z1)], [V(x0, 0, z1), V(x0, 0, z0)]];
-      for (const [a, c] of sides) b.add(quad(a, c, c.clone().setY(h), a.clone().setY(h), a.distanceTo(c), 1), M.wheatSide);
-    }
-    b.add(quadUp(PARK[0] - 30, PARK[0] + 30, PARK[2] - 30, PARK[2] + 30, 15, 15, 0.05), M.lawn);
-    b.add(quadUp(PARK[0] - 1.2, PARK[0] + 1.2, PARK[2] - 30, PARK[2] + 30, 1, 25, 0.1), M.paving);
-    b.add(quadUp(MONUMENT[0] - 20, MONUMENT[0] + 20, MONUMENT[2] - 6, MONUMENT[2] + 30, 10, 9, 0.08), M.paving);
+    b.add(quadUp(-1000, 100, -1000, 1000, 275, 500, 0), M.paving);
+    b.add(quadUp(100, 300, -1000, 1000, 50, 500, 0), M.lawn);
+    b.add(quadUp(300, 1000, -1000, 1000, 350, 1000, 0), M.tiles);
 
-    // ---- fence (posts every 3 m, three wires) with a broken gap where the emus come through ----
-    for (let x = -300; x <= 300; x += 3) {
-      if (Math.abs(x) < 7 || (x > TRACK.x0 - 1 && x < TRACK.x1 + 1)) continue; // gap for the emus' break-in and a gate for the track
-      b.add(boxGeo(V(x - 0.06, 0, FENCE_Z - 0.06), V(x + 0.06, 1.25, FENCE_Z + 0.06)), M.post);
-    }
-    for (const y of [0.45, 0.8, 1.12]) for (const [x0, x1] of [[-300, -6], [6, TRACK.x0 - 1], [TRACK.x1 + 1, 300]])
-      b.add(boxGeo(V(x0, y - 0.012, FENCE_Z - 0.012), V(x1, y + 0.012, FENCE_Z + 0.012)), M.wire);
-    b.add(boxGeo(V(5.6, 0, FENCE_Z - 0.4), V(5.75, 0.95, FENCE_Z + 0.1)), M.post); // a leaning broken post (stays short)
-
-    // ---- the dam: water, mud ring, earth bank ----
-    const water = new THREE.CircleGeometry(DAM_R, 48); water.rotateX(-Math.PI / 2);
-    b.add(water, M.water, new THREE.Matrix4().makeTranslation(DAM[0], 0.06, DAM[2]));
-    const mud = new THREE.RingGeometry(DAM_R - 0.2, DAM_R + 1.4, 48); mud.rotateX(-Math.PI / 2);
-    b.add(mud, M.mud, new THREE.Matrix4().makeTranslation(DAM[0], 0.04, DAM[2]));
-    const bank = new THREE.LatheGeometry([new THREE.Vector2(DAM_R + 1.4, 0.0), new THREE.Vector2(DAM_R + 2.6, 1.15), new THREE.Vector2(DAM_R + 3.6, 1.5),
-      new THREE.Vector2(DAM_R + 4.6, 1.15), new THREE.Vector2(DAM_R + 6.0, 0.0)], 64, 1.4 * Math.PI, 1.2 * Math.PI); // open toward -z (north, lathe angle pi), where the emus walk in // open on the north side
-    b.add(bank, M.bank, new THREE.Matrix4().makeTranslation(DAM[0], 0, DAM[2]));
-
-    // ---- farmhouse: weatherboard box, hipped iron roof, verandah, tank stand and the pump windmill ----
-    {
-      const [hx, , hz] = HOUSE, w = 12, d = 9, h = 3.2;
-      b.add(boxGeo(V(hx - w / 2, 0, hz - d / 2), V(hx + w / 2, h, hz + d / 2), 3), M.board);
-      const roof = new THREE.ConeGeometry(1, 1, 4, 1, true); roof.rotateY(Math.PI / 4);
-      b.add(roof, M.ironRed, new THREE.Matrix4().compose(V(hx, h + 1.4, hz), new THREE.Quaternion(), V((w + 1.2) / Math.SQRT2, 2.8, (d + 1.2) / Math.SQRT2)));
-      // verandah along the front (-z): sloping iron roof on posts
-      b.add(quad(V(hx - w / 2 - 0.6, h, hz - d / 2 - 0.4), V(hx + w / 2 + 0.6, h, hz - d / 2 - 0.4), V(hx + w / 2 + 0.6, 2.45, hz - d / 2 - 2.8), V(hx - w / 2 - 0.6, 2.45, hz - d / 2 - 2.8), 6, 2), M.iron);
-      for (let k = 0; k <= 4; k++) b.add(boxGeo(V(hx - w / 2 + k * (w / 4) - 0.08, 0, hz - d / 2 - 2.7), V(hx - w / 2 + k * (w / 4) + 0.08, 2.45, hz - d / 2 - 2.55)), M.trim);
-      b.add(boxGeo(V(hx - w / 2 - 0.6, 0, hz - d / 2 - 2.8), V(hx + w / 2 + 0.6, 0.25, hz - d / 2)), M.wood);
-      b.add(boxGeo(V(hx - 0.55, 0.25, hz - d / 2 - 0.03), V(hx + 0.55, 2.3, hz - d / 2)), M.dark);
-      for (const s of [-1, 1]) {
-        b.add(boxGeo(V(hx + s * 3.2 - 0.75, 1.0, hz - d / 2 - 0.04), V(hx + s * 3.2 + 0.75, 2.2, hz - d / 2)), M.window);
-        b.add(boxGeo(V(hx + s * 3.2 - 0.85, 0.92, hz - d / 2 - 0.08), V(hx + s * 3.2 + 0.85, 1.0, hz - d / 2)), M.trim);
-      }
-      b.add(boxGeo(V(hx + 3.5, h, hz + 1), V(hx + 4.3, h + 2.6, hz + 1.8), 2), M.sand); // chimney
-      // tank on a stand
-      const tank = new THREE.CylinderGeometry(1.5, 1.5, 2.2, 24, 1);
-      b.add(tank, M.iron, new THREE.Matrix4().makeTranslation(hx - 10, 3.3, hz - 1));
-      for (const [ox, oz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) b.add(boxGeo(V(hx - 10 + ox * 1.1 - 0.1, 0, hz - 1 + oz * 1.1 - 0.1), V(hx - 10 + ox * 1.1 + 0.1, 2.2, hz - 1 + oz * 1.1 + 0.1)), M.wood);
-      // windmill: tapering steel lattice tower
-      const wx = hx - 16, wz = hz + 3, top = 9;
-      for (const [ox, oz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-        const a = V(wx + ox * 1.3, 0, wz + oz * 1.3), c = V(wx + ox * 0.25, top, wz + oz * 0.25);
-        const g = new THREE.CylinderGeometry(0.05, 0.06, a.distanceTo(c), 6);
-        b.add(g, M.steel, new THREE.Matrix4().compose(a.clone().add(c).multiplyScalar(0.5), new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), c.clone().sub(a).normalize()), V(1, 1, 1)));
-      }
-      for (const y of [2.5, 5, 7.5]) { const k = 1.3 - (1.05 * y) / top; b.add(boxGeo(V(wx - k, y - 0.03, wz - k), V(wx + k, y + 0.03, wz + k)), M.steel); }
-      this.fan.position.set(wx, top + 0.4, wz);
-      for (let i = 0; i < 14; i++) {
-        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.03, 1.4, 0.32), M.steel);
-        blade.position.set(0, 0.85, 0); const pivot = new THREE.Group(); pivot.rotation.x = (i / 14) * Math.PI * 2; pivot.add(blade);
-        blade.rotation.y = 0.5; blade.castShadow = true; this.fan.add(pivot);
-      }
-      const vane = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.9, 1.6), M.steel); vane.position.set(0, 0.2, -1.4);
-      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.3, 12).rotateZ(Math.PI / 2), M.steel);
-      const head = new THREE.Group(); head.position.copy(this.fan.position); head.add(vane, hub); head.rotation.y = Math.PI / 2;
-      this.fan.rotation.y = Math.PI / 2; R.add(head, this.fan);
-    }
-    // mailbox: post + kerosene-tin box
-    b.add(boxGeo(V(MAILBOX[0] - 0.06, 0, MAILBOX[2] - 0.06), V(MAILBOX[0] + 0.06, 1.05, MAILBOX[2] + 0.06)), M.post);
-    b.add(boxGeo(V(MAILBOX[0] - 0.25, 1.05, MAILBOX[2] - 0.18), V(MAILBOX[0] + 0.25, 1.4, MAILBOX[2] + 0.18)), M.iron);
-
-    // ---- army camp: tent, a crate for the guns, the ammunition stack (shot 4) and empty crates (shot 13) ----
-    {
-      const [cx, , cz] = CAMP, tx = cx - 5, tz = cz + 6;
-      const tent = new THREE.CylinderGeometry(2.0, 2.0, 4.2, 3, 1); tent.rotateZ(Math.PI / 2); tent.rotateX(Math.PI);
-      b.add(tent, M.canvas, new THREE.Matrix4().makeTranslation(tx, 1.0, tz));
-      b.add(boxGeo(V(tx - 2.1, 0, tz - 0.05), V(tx - 2.05, 1.6, tz + 0.05)), M.post);
-      b.add(boxGeo(V(CRATE_GUNS[0] - 0.7, 0, CRATE_GUNS[2] - 0.35), V(CRATE_GUNS[0] + 0.7, 0.62, CRATE_GUNS[2] + 0.35), 1), M.crate);
-      const crate = (g: THREE.Group, x: number, y: number, z: number, yaw = 0, open = false) => {
-        const m = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.48, 0.5), M.crate);
-        m.position.set(x, y + 0.24, z); m.rotation.y = yaw; m.castShadow = m.receiveShadow = true; g.add(m);
-        if (open) { const lid = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.04, 0.52), M.crate); lid.position.set(x + 0.35, y + 0.2, z - 0.35); lid.rotation.set(0.9, yaw, 0.3); lid.castShadow = true; g.add(lid); }
-      };
-      for (let k = 0; k < 6; k++) for (let i = 0; i < 4 - (k > 3 ? 1 : 0); i++) for (let j = 0; j < 2; j++)
-        crate(this.ammoStack, AMMO[0] - 1.35 + i * 0.92 + (k % 2) * 0.2, k * 0.48, AMMO[2] - 0.26 + j * 0.52);
-      const r = rng(77);
-      for (let i = 0; i < 9; i++) crate(this.emptyCrates, CAMP[0] - 1 + r() * 5, 0, CAMP[2] - 2.5 + r() * 4, r() * 3, true);
-      R.add(this.ammoStack, this.emptyCrates);
-    }
-
-    // ---- the truck (1930s flatbed, local +x forward), posed per frame ----
-    {
-      const T = this.truck, add = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number) => {
-        const mesh = new THREE.Mesh(g, m); mesh.position.set(x, y, z); mesh.castShadow = mesh.receiveShadow = true; T.add(mesh); return mesh;
-      };
-      add(new THREE.BoxGeometry(4.8, 0.22, 1.5), M.black, 0, 0.62, 0); // chassis
-      add(new THREE.BoxGeometry(1.25, 1.3, 1.75), M.green, 0.15, 1.42, 0); // cab
-      add(new THREE.BoxGeometry(1.1, 0.48, 1.5), M.window, 0.2, 1.7, 0).scale.set(1.02, 1, 1.02);
-      add(new THREE.BoxGeometry(1.3, 0.25, 1.85), M.green, 0.15, 2.18, 0); // cab roof
-      add(new THREE.BoxGeometry(1.35, 0.7, 1.2), M.green, 1.45, 1.08, 0); // bonnet
-      add(new THREE.BoxGeometry(0.12, 0.72, 1.0), M.steel, 2.15, 1.05, 0); // radiator
-      add(new THREE.BoxGeometry(2.4, 0.12, 1.95), M.wood, -1.6, 0.86, 0); // tray
-      for (const s of [-1, 1]) add(new THREE.BoxGeometry(2.4, 0.4, 0.06), M.wood, -1.6, 1.12, s * 0.95);
-      add(new THREE.BoxGeometry(0.06, 0.4, 1.95), M.wood, -2.78, 1.12, 0);
-      for (const [x, s] of [[1.45, -1], [1.45, 1], [-1.6, -1], [-1.6, 1]] as const) {
-        const w = add(new THREE.CylinderGeometry(0.42, 0.42, 0.26, 18).rotateX(Math.PI / 2), M.black, x, 0.42, s * 0.82);
-        this.truckWheels.push(w);
-        add(new THREE.BoxGeometry(1.0, 0.08, 0.36), M.green, x, 0.88, s * 0.86); // mudguard
-      }
-      for (const s of [-1, 1]) add(new THREE.CylinderGeometry(0.11, 0.11, 0.08, 12).rotateZ(Math.PI / 2), M.trim, 2.2, 1.3, s * 0.48); // lamps
-      R.add(T);
-    }
-
-    // ---- the park corner and the monument ----
-    {
-      const [px, , pz] = PARK;
-      b.add(boxGeo(V(px - 1.0, 0.42, pz - 2.9), V(px + 1.0, 0.5, pz - 2.4)), M.wood); // bench seat
-      b.add(boxGeo(V(px - 1.0, 0.5, pz - 2.95), V(px + 1.0, 0.95, pz - 2.88)), M.wood);
-      for (const s of [-1, 1]) b.add(boxGeo(V(px + s * 0.9 - 0.04, 0, pz - 2.9), V(px + s * 0.9 + 0.04, 0.45, pz - 2.4)), M.steel);
-      b.add(new THREE.CylinderGeometry(0.06, 0.08, 3.4, 8), M.black, new THREE.Matrix4().makeTranslation(px + 2.4, 1.7, pz - 3.2));
-      b.add(new THREE.SphereGeometry(0.22, 12, 8), M.trim, new THREE.Matrix4().makeTranslation(px + 2.4, 3.5, pz - 3.2));
-      const [mx, , mz] = MONUMENT;
-      b.add(boxGeo(V(mx - 6, 0, mz - 0.8), V(mx + 6, 5.4, mz), 2), M.sand);
-      b.add(boxGeo(V(mx - 6.3, 5.4, mz - 1.0), V(mx + 6.3, 5.75, mz + 0.2), 2), M.sand);
-      for (const s of [-1, 1]) b.add(boxGeo(V(mx + s * 3 - 0.9, 0, mz), V(mx + s * 3 + 0.9, 1.0, mz + 1.6), 2), M.sand); // plinths for the two supporters
-      const em = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.2), new THREE.MeshLambertMaterial({ map: ctex("emblem", 1000, 1000, (g) => emblem(new Pen(g))), alphaTest: 0.5 }));
-      em.position.set(mx, 3.0, mz + 0.03); em.layers.set(NOINK); R.add(em);
-    }
-
-    // ---- gum trees, shrubs (cartoon vegetation; skipped where a lens looks through) ----
+    // ---- the town: courtyard rows (no cast shadows, so the yard stays sunlit) + blocks around for the aerial ----
     setSight(sightLines());
-    const r = rng(1932);
-    const tree = (x: number, z: number, h: number) => prop(b, kit, r() < 0.5 ? "tree_default" : "tree_oak", x, 0, z, h, r() * 6);
-    for (let i = 0; i < 26; i++) tree(-60 + r() * 140, 62 + r() * 60, 7 + r() * 5);            // around the house
-    for (let i = 0; i < 30; i++) tree(-300 + r() * 600, FENCE_Z - 8 - r() * 260, 5 + r() * 6);  // outback
-    for (let i = 0; i < 70; i++) prop(b, kit, "plant_bush", -300 + r() * 600, 0, FENCE_Z - 3 - r() * 260, 0.6 + r() * 0.6, r() * 6);
-    for (let i = 0; i < 12; i++) tree(DAM[0] - 40 + r() * 80, DAM[2] - 40 + r() * 30, 6 + r() * 4); // behind the dam
-    for (let i = 0; i < 10; i++) tree(300 + r() * 30, -60 + r() * 140, 7 + r() * 4);            // paddock's far edge
-    for (const [dx, dz, h] of [[-6, -8, 7], [7, -9, 8], [-9, 6, 6.5], [9, 7, 7.5]]) tree(PARK[0] + dx, PARK[2] + dz, h);
-    for (let i = 0; i < 8; i++) prop(b, kit, "hedge", PARK[0] - 12 + i * 3.3, 0, PARK[2] - 12, 1.0, 0);
-    for (const [dx, dz] of [[-12, -4], [12, -4], [-15, 8], [15, 8]]) tree(MONUMENT[0] + dx, MONUMENT[2] + dz, 8);
+    const hb = new Batch(), r = rng(1904);
+    const H = () => [9.8, 11.2][Math.floor(r() * 2)];
+    const { x0, x1, z0, z1 } = COURT;
+    for (const [a, c] of [[x0 - 0.5, -2.6], [2.6, x1 + 0.5]]) { const w = (c - a) / 2; for (let k = 0; k < 2; k++) house(hb, a + w * (k + 0.5), z0 - 4, 0, w, 8, H(), Math.floor(r() * 8)); }
+    for (let k = 0; k < 4; k++) house(hb, x0 - 0.5 + 7.75 * (k + 0.5), z1 + 4, Math.PI, 7.75, 8, H(), Math.floor(r() * 8));
+    for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) house(hb, sx * (x1 + 4), z0 + ((z1 - z0) / 3) * (k + 0.5), sx > 0 ? -Math.PI / 2 : Math.PI / 2, (z1 - z0) / 3, 8, H(), Math.floor(r() * 8));
+    for (let x = -14; x <= 14; x += 7) house(hb, x, -32, 0, 7, 8, H(), Math.floor(r() * 8)); // across the street, seen through the gate
+    for (let gx = -90; gx <= 90; gx += 30) for (let gz = -90; gz <= 90; gz += 30) {
+      if (Math.abs(gx) < 40 && Math.abs(gz) < 40) continue;
+      for (let k = 0; k < 3; k++) house(hb, gx - 9 + k * 9, gz, r() < 0.5 ? 0 : Math.PI, 8.5, 9, H(), Math.floor(r() * 8));
+    }
+    hb.build(R, false);
+    // a pump and a tree in the yard's corners
+    b.add(new THREE.CylinderGeometry(0.12, 0.16, 1.4, 10).translate(0, 0.7, 0), M.iron, new THREE.Matrix4().makeTranslation(-11.5, 0, -10.5));
+    b.add(boxGeo(V(-11.8, 1.3, -10.6), V(-11.2, 1.4, -10.4)), M.iron);
+    prop(b, kit, "tree_oak", 12, 0, 9.5, 8, 1.2);
+
+    // ---- the park lawn: trees, hedges, a bench ----
+    const [px, , pz] = PARK;
+    for (const [dx, dz, h] of [[-7, -9, 7], [6, -10, 8], [-10, -3, 6.5], [10, -4, 7.5], [-4, -14, 8], [3, -16, 7]]) prop(b, kit, r() < 0.5 ? "tree_default" : "tree_oak", px + dx, 0, pz + dz, h, r() * 6);
+    for (let i = 0; i < 6; i++) prop(b, kit, "hedge", px - 8 + i * 3.2, 0, pz - 6, 1.0, 0);
+    b.add(boxGeo(V(px - 3.6, 0.42, pz - 3.2), V(px - 1.6, 0.5, pz - 2.7)), M.wood);
+    b.add(boxGeo(V(px - 3.6, 0.5, pz - 3.25), V(px - 1.6, 0.95, pz - 3.18)), M.wood);
+    for (const sx of [-1, 1]) b.add(boxGeo(V(px - 2.6 + sx * 0.9 - 0.04, 0, pz - 3.2), V(px - 2.6 + sx * 0.9 + 0.04, 0.45, pz - 2.7)), M.iron);
+    for (let i = 0; i < 30; i++) prop(b, kit, r() < 0.5 ? "tree_default" : "tree_oak", px - 60 + r() * 120, 0, pz - 25 - r() * 60, 6 + r() * 4, r() * 6);
+
+    // ---- the lab room: walls on three sides, skirting, windows, the partition, a framed portrait of Hans ----
+    {
+      const { x0: lx0, x1: lx1, z0: lz0, z1: lz1, h } = LAB_ROOM, t2 = 0.2;
+      b.add(boxGeo(V(lx0, 0, lz0 - t2), V(lx1, h, lz0)), M.plaster);
+      b.add(boxGeo(V(lx0 - t2, 0, lz0 - t2), V(lx0, h, lz1)), M.plaster);
+      b.add(boxGeo(V(lx1, 0, lz0 - t2), V(lx1 + t2, h, lz1)), M.plaster);
+      b.add(boxGeo(V(lx0, 0, lz0), V(lx1, 0.14, lz0 + 0.03)), M.skirting);
+      b.add(boxGeo(V(lx0, 0, lz0), V(lx0 + 0.03, 0.14, lz1)), M.skirting);
+      b.add(boxGeo(V(lx1 - 0.03, 0, lz0), V(lx1, 0.14, lz1)), M.skirting);
+      for (const wz of [-1.5, 3.5]) for (const wx of [lx0 + 0.01, lx1 - 0.05]) b.add(boxGeo(V(wx, 1.2, wz - 1.0), V(wx + 0.04, 3.0, wz + 1.0)), M.window);
+      for (const wx of [403.5, 405.6]) b.add(boxGeo(V(wx - 0.8, 1.3, lz0 + 0.01), V(wx + 0.8, 3.1, lz0 + 0.05)), M.window);
+      const { x, z0: pz0, z1: pz1, h: ph } = PANEL;
+      b.add(boxGeo(V(x - 0.04, 0.12, pz0), V(x + 0.04, ph, pz1)), M.panel);
+      b.add(boxGeo(V(x - 0.06, ph - 0.06, pz0 - 0.02), V(x + 0.06, ph + 0.02, pz1 + 0.02)), M.frame);
+      for (const zz of [pz0, (pz0 + pz1) / 2, pz1]) b.add(boxGeo(V(x - 0.06, 0, zz - 0.04), V(x + 0.06, ph, zz + 0.04)), M.frame);
+      b.add(boxGeo(V(396.6, 1.55, lz0 + 0.01), V(398.6, 3.35, lz0 + 0.06)), M.frame);
+      const pic = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.5), new THREE.MeshLambertMaterial({ map: ctex("hansPortrait", 600, 530, (g) => {
+        g.fillStyle = "#e9d8b0"; g.fillRect(0, 0, 600, 530); g.save(); g.translate(300, 0); g.scale(0.6, 0.6); g.translate(-300, -380); horseFront(new Pen(g), { expr: "proud" }); g.restore();
+      }) }));
+      pic.position.set(397.6, 2.45, lz0 + 0.07); pic.layers.set(NOINK); R.add(pic);
+    }
     setSight([]);
     b.build(R);
 
@@ -338,15 +226,6 @@ export class World {
 
   private actor(i: number) { while (this.actors.length <= i) this.actors.push(new Actor(this.root)); return this.actors[i]; }
   private fx(i: number) { while (this.fxs.length <= i) this.fxs.push(new Fx(this.root)); return this.fxs[i]; }
-
-  /** truck at (x, z) heading yaw (0 = +x), with the bumpy ride */
-  private poseTruck(x: number, z: number, yaw: number, t: number, rideK: number, spin: number) {
-    const b = bump(t, rideK);
-    this.truck.visible = true;
-    this.truck.position.set(x, b.heave, z);
-    this.truck.rotation.set(b.roll, yaw, b.pitch, "YXZ");
-    for (const w of this.truckWheels) w.rotation.z = -spin;
-  }
 
   update(id: number, f: number, cam: THREE.PerspectiveCamera, scene: THREE.Scene) {
     const t = f / FPS, s = SHOTS[id - 1], L = LIGHTS[s.light];
@@ -394,24 +273,9 @@ export class World {
     }
     for (const g of this.fgs) g.o.visible = f >= g.a && f < g.b && g.a < s.b && g.b > s.a;
     // ---- set pieces per shot ----
-    this.fan.rotation.x = t * 2.2;
-    this.ammoStack.visible = id === 4;
-    this.ammoStack.children.forEach((m, i) => { // the stack grows on "ten thousand bullets"
-      const k = Math.floor(i / 7), show = f < 500 ? k < 2 : f >= 500 + k * 3;
-      m.visible = show;
-    });
-    this.emptyCrates.visible = id === 13;
-    this.truck.visible = false;
-    if (id === 4) this.poseTruck(CAMP[0] + 1, CAMP[2] + 4.5, Math.PI, 0, 0, 0);
-    else if (id === 7 && f < 925) this.poseTruck(100, 0, 0, 0, 0, 0);
-    else if (id === 7) this.poseTruck(truckX(t), 0, 0, t, 1, (truckX(t) - 100) / 0.42);
-    else if (id === 9) this.poseTruck(100, 0, 0, 0, 0, 0);
-    else if (id === 10) this.poseTruck(18.5, TRUCK10Z(t), -Math.PI / 2, t, 0.35, (TRUCK10Z(t) + 80) / 0.42);
-    else if (id === 13) this.poseTruck(CAMP[0] + 1, CAMP[2] + 4.5, Math.PI, 0, 0, 0);
-    else if (id === 12 && f >= 1594) { const tt = t - CHASE2_T0 + CHASE_T0; this.poseTruck(truckX(tt), 0, 0, tt, 1, (truckX(tt) - 100) / 0.42); }
     // ---- cast + effects ----
     const right = V(0, 0, 0).setFromMatrixColumn(cam.matrixWorld, 0);
-    const st = stage(id, t, { pos: cam.position, right, sun: sunDir }, this.truck);
+    const st = stage(id, t, { pos: cam.position, right, sun: sunDir });
     this.frustum.setFromProjectionMatrix(this.m4.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
     let ai = 0;
     const used: Actor[] = [];
@@ -447,7 +311,7 @@ export class World {
     this.pool.flush();
     for (const a of used) a.bind();
     for (const e3 of fused) e3.bind();
-    void TRACK; void rep;
+    void rep; void kitClone; void quad;
     return focus;
   }
 }

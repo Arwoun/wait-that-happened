@@ -1,4 +1,4 @@
-// Episode 1 cast that is not a person: emus (side + front), the Lewis gun, a park pigeon and the closing emblem.
+// Episode 2 cast that is not a person: Hans the horse (side + front), the blackboard, a sniffer dog, suitcases and a computer.
 // Same drawing language as toon.ts: flat fills with a soft crescent away from the light, plum ink, thick-thin outlines.
 // Design space: 600 x 1000 units, soles at y = 975 (1000 units = 2.16 m), so an emu ~1.75 m tall reaches y ~165.
 import { Pen, INK, mul, shade, mix, thickAngle } from "./toon";
@@ -38,273 +38,248 @@ const ribbon = (p: Pen, pts: P2[], w: (t: number) => number, c0: string, c1: str
   p.stroke(L, ol); p.stroke(R, ol);
 };
 
-// ---------------- emu ----------------
-export const PLUME = "#7b6651", PLUME_SH = "#4f4036", PLUME_DK = "#3e3129";
-export const NECK = "#8ea2c2", NECK_SH = "#64779a";
-export const LEG = "#8d8781", LEG_SH = "#5f5a56";
-export type EmuPose = "stand" | "walk" | "run" | "peck" | "watch" | "drink";
-export type EmuExpr = "deadpan" | "smug" | "alarm" | "blink" | "proud";
-export type EmuOpts = { pose?: EmuPose; phase?: number; expr?: EmuExpr; light?: number; seed?: number; lid?: number; look?: number };
+// ---------------- Hans (our own cartoon horse) ----------------
+// Side view faces screen-right. Drawn at HALF the people's scale: on its card 1 m = 231 units (place it with scale 2),
+// so a 1.55 m horse at the withers fills the lower half of the 600 x 1000 canvas; hooves on the soles line (y = 975).
+export const COAT = "#9a6440", COAT_SH = "#66402c", MANE = "#2f2326", MANE_SH = "#1e1618", MUZZLE = "#6e4c40", HOOF = "#3a3036";
+export type HorseExpr = "deadpan" | "proud" | "alarm" | "dazed" | "wink" | "focus";
+export type HorseOpts = { tap?: number; expr?: HorseExpr; lid?: number; look?: number; blinders?: boolean; headDown?: number; light?: number; seed?: number; walk?: number };
+/** side view: horse metres -> canvas (1 m = 215 units, the horse's x = 0 sits 0.302 m left of the card centre) */
+export const HORSE_SCALE = 1 / (215 * 0.00216), HORSE_X0 = (300 - 235) / 215;
+const HM = (x: number, y: number): P2 => [235 + x * 215, 975 - y * 215];
+const HMF = (x: number, y: number): P2 => [300 + x * 215, 975 - y * 215];
 
-/** shaggy body contour: smooth back, ragged fringe underneath (tufts every ~25 units) */
-const plumage = (cx: number, cy: number, rx: number, ry: number, tilt: number, seed: number): P2[] => {
-  const pts: P2[] = [], n = 90;
-  for (let i = 0; i < n; i++) {
-    const t = (i / n) * Math.PI * 2, s = Math.sin(t), c = Math.cos(t);
-    let r = 1 + 0.025 * Math.cos(3 * t + seed);
-    if (s > 0.05) r += 0.075 * s * Math.abs(Math.sin(7.5 * t + seed * 1.7)); // fringe on the underside
-    if (c < -0.55 && s > -0.4) r += 0.05 * Math.abs(Math.sin(6 * t)); // rump tufts
-    pts.push(rotP([cx + rx * c * r, cy + ry * s * r], tilt, [cx, cy]));
-  }
-  return pts;
-};
-
-/** emu leg: hip -> backward joint -> foot, three forward toes */
-const emuLeg = (p: Pen, hip: P2, foot: P2, l1: number, l2: number, col: string, lift: number) => {
-  const dx = foot[0] - hip[0], dy = foot[1] - hip[1], d = clamp(Math.hypot(dx, dy), 1, l1 + l2 - 0.5);
-  const A = Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1)), k = Math.atan2(dy, dx) + A; // joint bends back (-x)
-  const J: P2 = [hip[0] + l1 * Math.cos(k), hip[1] + l1 * Math.sin(k)];
-  p.line([hip, J], col, 30);
-  p.line([J, foot], col, 21);
-  p.dot(J[0], J[1], 15, col);
-  const curl = lift * 0.6;
-  for (const [a, L] of [[-8, 46], [10, 40], [-28, 30]] as const) {
-    const ang = rad(a + 40 * curl);
-    p.line([foot, [foot[0] + L * Math.cos(ang), foot[1] + L * Math.sin(ang)]], col, 11);
-  }
-};
-
-const emuEye = (p: Pen, x: number, y: number, expr: EmuExpr, lid: number, look: number, skin: string) => {
+const horseEye = (p: Pen, x: number, y: number, r: number, expr: HorseExpr, lid: number, look: number, skin: string) => {
+  if (expr === "wink" || lid >= 0.99) { p.arc(x, y + 2, r, r * 0.6, 15, 165, 4.5); return; }
+  if (expr === "dazed") { const s: P2[] = []; for (let t = 1; t < 16; t++) s.push([x + Math.cos(t * 0.9) * t * 0.06 * r * 2, y + Math.sin(t * 0.9) * t * 0.06 * r * 2]); p.ell(x, y, r, r * 1.05, "#fbf6ec", 4); p.stroke(s, 3.2); return; }
   const big = expr === "alarm";
-  const rx = big ? 17 : 13, ry = big ? 20 : 15;
-  if (expr === "blink" || lid >= 0.99) { p.arc(x, y + 2, rx, 5, 10, 170, 4); return; }
+  const rx = r * (big ? 1.2 : 1), ry = r * (big ? 1.3 : 1.08);
   p.ell(x, y, rx, ry, "#fbf6ec", 4);
-  const px = x + look * 4 + 2, py = y + 1;
-  if (!big) p.dot(px, py, 8.5, "#c7692a");
-  p.dot(px, py, big ? 4.5 : 5, INK);
-  p.dot(px - 3, py - 3, big ? 1.6 : 1.8, "#ffffff");
-  // eyelid: deadpan / smug half-closed, proud a little lower
-  const k = expr === "deadpan" || expr === "smug" ? 0.52 : expr === "proud" ? 0.38 : 0;
-  const kk = Math.max(k, lid);
+  const px = x + look * r * 0.38 + r * 0.12, py = y + r * 0.1;
+  p.dot(px, py, r * (big ? 0.42 : 0.56), "#3b2a24");
+  p.dot(px, py, r * (big ? 0.3 : 0.36), INK);
+  p.dot(px - r * 0.2, py - r * 0.22, r * 0.12, "#ffffff");
+  const k = expr === "deadpan" ? 0.5 : expr === "proud" ? 0.42 : expr === "focus" ? 0.3 : 0, kk = Math.max(k, lid);
   if (kk > 0) {
     const yl = y - ry + 2 * ry * kk;
-    const lidPts: P2[] = [...ell(x, y, rx + 1, ry + 1, 180, 360), [x + rx + 1, yl], [x - rx - 1, yl]];
-    p.poly(lidPts, skin, 0);
-    p.stroke([[x - rx - 2, yl + (expr === "smug" ? 3 : 0)], [x + rx + 2, yl - (expr === "smug" ? 3 : 0)]], 4.5);
+    p.poly([...ell(x, y, rx + 1, ry + 1, 180, 360), [x + rx + 1, yl], [x - rx - 1, yl]], skin, 0);
+    p.stroke([[x - rx - 2, yl + (expr === "proud" ? 3 : 0)], [x + rx + 2, yl - (expr === "proud" ? 4 : 0)]], 5);
     p.poly(ell(x, y, rx, ry), null, 4);
   }
 };
 
-/** side view facing screen-right. phase 0..1 per stride cycle (walk 1 cycle = 2 steps). */
-export const emuSide = (p: Pen, o: EmuOpts = {}) => {
-  const { pose = "stand", phase = 0, expr = "deadpan", light = DEF_LIGHT, seed = 1, lid = 0, look = 0 } = o;
-  const two = Math.PI * 2, thick = thickAngle(light);
-  const run = pose === "run", walk = pose === "walk" || run, down = pose === "peck" || pose === "drink";
-  const S = run ? 420 : walk ? 230 : 0; // stride (units), run ~ planted feet long strides
-  const bob = walk ? (run ? 26 : 12) * Math.cos(2 * two * phase) : 0;
-  const tilt = rad(run ? -13 : down ? 12 : pose === "watch" ? -6 : -3);
-  const bx = 268 + (run ? -20 : 0), by = (run ? 545 : down ? 560 : 520) + bob;
-  const l1 = 205, l2 = 200;
-  // legs (far first, darker)
-  const feet: { foot: P2; lift: number; near: boolean }[] = [];
-  for (const near of [false, true]) {
-    const ph = ((phase + (near ? 0 : 0.5)) % 1 + 1) % 1;
-    let fx = 0, lift = 0;
-    if (!walk) fx = near ? 18 : -22;
-    else if (ph < 0.58) fx = S * (0.5 - ph / 0.58); // planted: slides back at walking speed
-    else { const u = (ph - 0.58) / 0.42; fx = S * (-0.5 + u); lift = Math.sin(Math.PI * u); }
-    const lh = lift * (run ? 120 : 70);
-    feet.push({ foot: [bx + 20 + fx, 960 - lh], lift, near });
-  }
-  for (const L of feet) {
-    const hip: P2 = [bx + (L.near ? 22 : -2), by + 45];
-    emuLeg(p, hip, L.foot, l1, l2, L.near ? LEG : mul(LEG, [0.72, 0.72, 0.76]), L.lift);
-  }
-  // neck: base at the body's front shoulder, to the head
-  const NB = rotP([bx + 122, by - 62], tilt, [bx, by]);
-  let H: P2, headRot = 0;
-  if (pose === "run") H = [bx + 285, 330 + bob * 0.5];
-  else if (down) { H = [bx + 238, pose === "drink" ? 905 : 880]; headRot = rad(62); }
-  else if (pose === "watch") H = [bx + 150, 128];
-  else H = [bx + 175 + (walk ? 10 * Math.sin(two * phase * 2) : 0), 178 + bob * 0.6];
-  const K: P2 = down ? [NB[0] + 110, NB[1] - 30] : run ? [NB[0] + 70, NB[1] - 120] : [H[0] - 30, (NB[1] + H[1]) * 0.55];
-  const neck = qcurve(NB, K, H, 24);
-  ribbon(p, neck, (t) => 78 - 44 * Math.min(1, t / 0.6), PLUME_SH, NECK, 0.52, 9);
-  // body
-  const body = plumage(bx, by, 172, 112, tilt, seed);
-  p.shadedFill(body, PLUME, PLUME_SH, light, 172, 0.42);
-  // feather streaks
-  for (let i = 0; i < 9; i++) {
-    const a = rnd(seed, i) * 1.9 + 0.35, rr = 0.35 + 0.45 * rnd(seed, i + 20);
-    const c0 = rotP([bx - 120 + 240 * rnd(seed, i + 40), by - 50 + 110 * rnd(seed, i + 60)], tilt, [bx, by]);
-    p.arc(c0[0], c0[1], 26 * rr + 12, 14 * rr + 6, 20 + 60 * a, 120 + 60 * a, 3.5, PLUME_DK);
-  }
+/** a foreleg / hind leg as a tapered limb with a hoof; pts: top, joint, fetlock (canvas units) */
+const hleg = (p: Pen, top: P2, j: P2, f: P2, w0: number, col: string, hind: boolean) => {
+  p.line([top, j], col, w0);
+  p.line([j, f], col, w0 * 0.62);
+  if (hind) p.dot(j[0], j[1], w0 * 0.42, col);
+  const a = Math.atan2(f[1] - j[1], f[0] - j[0]) - Math.PI / 2, c = Math.cos(a), s = Math.sin(a), hw = w0 * 0.42, hh = w0 * 0.48;
+  const R2 = (x: number, y: number): P2 => [f[0] + x * c - y * s, f[1] + x * s + y * c];
+  p.poly([R2(-hw, 2), R2(hw * 1.15, 2), R2(hw * 1.5, hh), R2(-hw * 1.05, hh)], HOOF, 5);
+};
+
+export const horseSide = (p: Pen, o: HorseOpts = {}) => {
+  const { tap = 0, expr = "deadpan", lid = 0, look = 0, blinders = false, headDown = 0, light = DEF_LIGHT, seed = 1, walk = -1 } = o;
+  const thick = thickAngle(light), far = mul(COAT, [0.74, 0.72, 0.76]);
+  const wph = walk >= 0 ? walk : 0, wk = walk >= 0 ? 1 : 0, two = Math.PI * 2;
+  const bob = wk * 6 * Math.cos(2 * two * wph);
+  // tail (behind everything)
+  const T0 = HM(-0.8, 1.35 + bob / 215);
+  p.line(qcurve(T0, [T0[0] - 30, T0[1] + 30], [T0[0] - 22 + 6 * Math.sin(seed), T0[1] + 170], 12), MANE_SH, 34);
+  p.poly([[T0[0] - 14, T0[1] + 20], [T0[0] - 50, T0[1] + 120], [T0[0] - 40, T0[1] + 205], [T0[0] - 22, T0[1] + 180], [T0[0] - 8, T0[1] + 214], [T0[0] + 6, T0[1] + 150], [T0[0] + 8, T0[1] + 30]], MANE, 7);
+  // legs: far pair first (darker), then near
+  const swing = (ph: number) => wk * Math.sin(two * (wph + ph));
+  const leg = (x: number, near: boolean, hind: boolean, lift: number, ph: number) => {
+    const col = near ? COAT : far, sw = swing(ph) * 0.12;
+    const top = HM(x, 0.98 + bob / 215), w0 = hind ? 46 : 36;
+    if (hind) { const j = HM(x - 0.12 + sw * 0.5, 0.45), f = HM(x - 0.06 + sw, 0.09 + Math.max(0, swing(ph)) * 0.08 * wk); hleg(p, top, j, f, w0, col, true); return; }
+    const j = HM(x + 0.02 + 0.2 * lift + sw * 0.5, 0.48 + 0.16 * lift), f = HM(x + 0.03 + 0.1 * lift + sw, 0.09 + 0.3 * lift + Math.max(0, swing(ph)) * 0.08 * wk);
+    hleg(p, top, j, f, w0, col, false);
+  };
+  leg(-0.7, false, true, 0, 0.5); leg(0.34, false, false, 0, 0);
+  leg(-0.58, true, true, 0, 0); leg(0.46, true, false, clamp(tap, 0, 1), 0.5);
+  // barrel + chest + rump
+  const by = 1.17 + bob / 215;
+  const body = ell(HM(-0.12, by)[0], HM(-0.12, by)[1], 0.74 * 215, 0.36 * 215, 0, 360, -2);
+  // neck (ribbon from the chest to the poll), drawn before the body so the body overlaps its base
+  const dn = clamp(headDown, 0, 1);
+  const poll = HM(0.86 - 0.02 * dn, 1.93 - 0.5 * dn + bob / 215), NB = HM(0.42, 1.25 + bob / 215);
+  const neck = qcurve(NB, [NB[0] + 40 + 30 * dn, (NB[1] + poll[1]) / 2 - 10], poll, 18);
+  ribbon(p, neck, (t) => 128 - 62 * t, COAT_SH, COAT, 0.02, 9);
+  p.shadedFill(body, COAT, COAT_SH, light, 0.74 * 215, 0.42);
+  // rump and shoulder masses
+  p.shadedFill(ell(HM(-0.62, by + 0.04)[0], HM(-0.62, by + 0.04)[1], 0.3 * 215, 0.34 * 215), COAT, COAT_SH, light, 0.34 * 215, 0.42);
   p.inkRing(body, 11, thick);
-  // head (rotated as a whole when pecking)
+  p.arc(HM(-0.6, by)[0], HM(-0.6, by)[1], 0.26 * 215, 0.3 * 215, 260, 330, 4, COAT_SH); // haunch crease
+  p.arc(HM(0.28, by)[0], HM(0.28, by)[1], 0.2 * 215, 0.26 * 215, 200, 260, 4, COAT_SH); // shoulder crease
+  // mane along the neck crest
+  const crest: P2[] = [];
+  for (let i = 0; i <= 10; i++) { const t = 0.15 + 0.85 * (i / 10), q2 = neck[Math.round(t * (neck.length - 1))]; crest.push([q2[0] - 30 * (1 - t) - 8, q2[1] - 24 + 10 * t]); }
+  const mane = [...crest.map(([x, y]) => [x - 6, y - 10] as P2), ...crest.slice().reverse().map(([x, y], i) => [x - 30 + 10 * Math.sin(i * 1.9 + seed), y + 44 + 12 * Math.sin(i * 2.7)] as P2)];
+  p.poly(mane, MANE, 6);
+  // head: rotated as a whole about the poll
   const save = p.rot;
-  p.rot = headRot ? [headRot, H[0], H[1]] : null;
-  const hx = H[0], hy = H[1];
-  const tuft: P2[] = [[hx - 30, hy - 14], [hx - 22, hy - 44], [hx - 10, hy - 30], [hx - 2, hy - 50], [hx + 8, hy - 30], [hx + 20, hy - 38], [hx + 22, hy - 16]];
-  if (expr === "alarm") tuft.splice(1, 5, [hx - 26, hy - 62], [hx - 10, hy - 36], [hx - 2, hy - 70], [hx + 8, hy - 36], [hx + 22, hy - 58]);
-  p.poly(tuft, PLUME_DK, 4);
-  const head = ell(hx, hy, 50, 40);
-  p.shadedFill(head, NECK, NECK_SH, light, 50, 0.4);
-  p.inkRing(head, 7, thick);
-  const beak: P2[] = [[hx + 36, hy - 6], [hx + 70, hy - 2], [hx + 96, hy + 9], [hx + 68, hy + 16], [hx + 34, hy + 15]];
-  p.poly(beak, "#4b4642", 5);
-  p.stroke([[hx + 38, hy + 6], [hx + 86, hy + 9]], 3);
-  if (expr === "smug" || expr === "proud") p.arc(hx + 24, hy + 8, 9, 8, 20, 120, 3.5); // beak-corner smirk
-  emuEye(p, hx + 10, hy - 8, expr, lid, look, NECK);
+  const hr = rad(-4 + 30 * dn);
+  const HS = 1.18; // head scale about the poll
+  p.rot = [hr, poll[0], poll[1]];
+  const hx = poll[0], hy = poll[1];
+  p.g.save(); p.g.translate(hx, hy); p.g.scale(HS, HS); p.g.translate(-hx, -hy);
+  for (const [dx, k] of [[-4, 0.9], [12, 1]] as const) p.poly([[hx + dx - 14, hy + 6], [hx + dx - 6, hy - 62 * k], [hx + dx + 18, hy + 4]], k < 1 ? COAT_SH : COAT, 6); // ears
+  const headP: P2[] = [[hx - 30, hy - 4], [hx + 24, hy - 12], [hx + 74, hy + 30], [hx + 112, hy + 86], [hx + 128, hy + 116], [hx + 122, hy + 142], [hx + 96, hy + 150],
+    [hx + 62, hy + 132], [hx + 22, hy + 112], [hx - 30, hy + 96], [hx - 52, hy + 52]];
+  p.shadedFill(headP, COAT, COAT_SH, light, 80, 0.4);
+  p.clip(headP, () => {
+    p.ell(hx + 112, hy + 128, 40, 34, MUZZLE, 0); // dark soft muzzle
+    p.poly([[hx + 20, hy - 6], [hx + 38, hy + 8], [hx + 70, hy + 46], [hx + 60, hy + 52], [hx + 26, hy + 18]], "#f4ead8", 0); // white blaze
+  });
+  p.poly(headP, null, 9);
+  p.arc(hx - 14, hy + 50, 40, 44, 20, 160, 4, COAT_SH); // cheek
+  p.ell(hx + 108, hy + 114, 7, 9, INK, 0); // nostril
+  p.stroke([[hx + 92, hy + 140], [hx + 118, hy + 142]], 4); // mouth
+  if (expr === "proud" || expr === "wink") p.arc(hx + 96, hy + 132, 10, 8, 30, 120, 3.5);
+  // forelock
+  p.poly([[hx - 8, hy - 8], [hx + 30, hy - 2], [hx + 26, hy + 26], [hx + 12, hy + 14], [hx + 4, hy + 30], [hx - 6, hy + 6]], MANE, 5);
+  // halter: noseband + cheek strap
+  p.band([[hx + 60, hy + 96], [hx + 70, hy + 136]], "#b0473a", 6, 2);
+  p.band([[hx - 20, hy + 22], [hx + 62, hy + 98]], "#b0473a", 5, 1.8);
+  const ex = hx + 30, ey = hy + 42;
+  horseEye(p, ex, ey, 17, expr, lid, look, COAT);
+  if (blinders) {
+    p.poly([[ex - 26, ey - 30], [ex + 22, ey - 34], [ex + 28, ey + 24], [ex - 22, ey + 28]], "#2a2226", 5);
+    p.stroke([[ex - 20, ey - 22], [ex + 18, ey - 25]], 3, "#5a4a50");
+  }
+  p.g.restore();
   p.rot = save;
 };
 
-/** front view (facing the camera), for close-ups, the lookout and the emblem */
-export const emuFront = (p: Pen, o: EmuOpts = {}) => {
-  const { pose = "stand", phase = 0, expr = "deadpan", light = DEF_LIGHT, seed = 2, lid = 0, look = 0 } = o;
-  const thick = thickAngle(light), tall = pose === "watch";
-  const bob = pose === "walk" ? 10 * Math.cos(4 * Math.PI * phase) : 0;
-  const bx = 300, by = 545 + bob;
+/** front view (facing the camera): long face, eyes on the sides, chest and forelegs; same half scale */
+export const horseFront = (p: Pen, o: HorseOpts = {}) => {
+  const { expr = "deadpan", lid = 0, look = 0, blinders = false, light = DEF_LIGHT, tap = 0 } = o;
+  const thick = thickAngle(light), far = mul(COAT, [0.8, 0.78, 0.82]);
   for (const s of [-1, 1]) {
-    const lift = pose === "walk" ? Math.max(0, Math.sin(2 * Math.PI * (phase + (s > 0 ? 0 : 0.5)))) * 40 : 0;
-    const hip: P2 = [bx + s * 52, by + 60], foot: P2 = [bx + s * 66, 958 - lift];
-    p.line([hip, [bx + s * 74, 790 - lift * 0.5], foot], s < 0 ? mul(LEG, [0.8, 0.8, 0.84]) : LEG, 26);
-    for (const a of [-60, 0, 60]) p.line([foot, [foot[0] + 22 * Math.sin(rad(a)) + s * 4, foot[1] + 14]], LEG, 11);
+    const lift = s > 0 ? clamp(tap, 0, 1) : 0;
+    const top = HMF(s * 0.17, 1.0), j = HMF(s * 0.19, 0.5 + 0.22 * lift), f = HMF(s * 0.19, 0.09 + 0.3 * lift);
+    hleg(p, top, j, f, 38, s < 0 ? far : COAT, false);
   }
-  const H: P2 = [bx + look * 6, tall ? 150 : 200 + bob];
-  const neck = qcurve([bx, by - 40], [H[0], (by - 40 + H[1]) / 2], H, 20);
-  ribbon(p, neck, (t) => 92 - 52 * Math.min(1, t / 0.6), PLUME_SH, NECK, 0.5, 9);
-  const body = plumage(bx, by, 150, 128, 0, seed);
-  p.shadedFill(body, PLUME, PLUME_SH, light, 150, 0.42);
-  for (let i = 0; i < 8; i++) {
-    const cx = bx - 100 + 200 * rnd(seed, i + 3), cy = by - 60 + 120 * rnd(seed, i + 9);
-    p.arc(cx, cy, 22, 12, 30, 150, 3.5, PLUME_DK);
+  const chest = ell(HMF(0, 1.2)[0], HMF(0, 1.2)[1], 0.4 * 215, 0.38 * 215);
+  const NB = HMF(0, 1.38), H = HMF(look * 0.03, 2.05);
+  p.line([NB, H], COAT_SH, 120, true);
+  p.shadedFill(chest, COAT, COAT_SH, light, 0.36 * 215, 0.4);
+  p.inkRing(chest, 11, thick);
+  const hx = H[0], hy = H[1];
+  for (const s of [-1, 1]) p.poly([[hx + s * 30, hy - 50], [hx + s * 52, hy - 118], [hx + s * 62, hy - 40]], COAT, 6);
+  const face: P2[] = [];
+  for (let i = 0; i <= 40; i++) {
+    const a = (i / 40) * Math.PI * 2, c = Math.cos(a), sn = Math.sin(a);
+    const yy = sn < 0 ? sn * 62 : sn * 150, w = sn < 0 ? 62 : 62 - 22 * sn; // broad brow, long narrowing face
+    face.push([hx + c * w, hy + 20 + yy]);
   }
-  p.inkRing(body, 11, thick);
-  const tuft: P2[] = [[H[0] - 30, H[1] - 18], [H[0] - 16, H[1] - (expr === "alarm" ? 66 : 48)], [H[0] - 4, H[1] - 30], [H[0] + 6, H[1] - (expr === "alarm" ? 72 : 52)],
-    [H[0] + 16, H[1] - 30], [H[0] + 28, H[1] - (expr === "alarm" ? 62 : 42)], [H[0] + 32, H[1] - 16]];
-  p.poly(tuft, PLUME_DK, 4);
-  const head = ell(H[0], H[1], 46, 38);
-  p.shadedFill(head, NECK, NECK_SH, light, 46, 0.4);
-  p.inkRing(head, 7, thick);
-  p.poly(ell(H[0], H[1] + 26, 24, 13), "#4b4642", 5); // beak end-on
-  p.stroke([[H[0] - 20, H[1] + 26], [H[0] + 20, H[1] + 26]], 3);
-  if (expr === "smug" || expr === "proud") p.arc(H[0] + 20, H[1] + 24, 8, 7, -30, 80, 3.5);
-  for (const s of [-1, 1]) emuEye(p, H[0] + s * 24, H[1] - 6, expr, lid, look, NECK);
-};
-
-// ---------------- Lewis gun (side view, muzzle to screen-right; base of the bipod at the soles line) ----------------
-export const lewisGun = (p: Pen, o: { fire?: number; jam?: number; light?: number } = {}) => {
-  const { fire = 0, jam = 0, light = DEF_LIGHT } = o;
-  const thick = thickAngle(light), y = 760;
-  const metal = "#3b3f48", metalSh = "#24272e", wood = "#7c5434";
-  // bipod
-  p.line([[430, y + 10], [395, 975]], metal, 12);
-  p.line([[430, y + 10], [470, 975]], mul(metal, [0.8, 0.8, 0.8]), 12);
-  // stock
-  const stock: P2[] = [[30, y + 6], [150, y - 14], [175, y + 4], [175, y + 36], [60, y + 66], [26, y + 58]];
-  p.gradFill(stock, wood, shade(wood, 0.7), light);
-  p.poly(stock, null, 7);
-  // receiver + grip
-  const rec: P2[] = [[160, y - 34], [270, y - 34], [270, y + 30], [160, y + 30]];
-  p.gradFill(rec, metal, metalSh, light);
-  p.poly(rec, null, 7);
-  p.poly([[205, y + 28], [228, y + 28], [216, y + 84], [196, y + 82]], wood, 6);
-  // cooling shroud (the fat barrel)
-  const sh = [...ell(270, y - 2, 0.1, 36, 90, 270), [540, y - 26] as P2, [540, y + 22] as P2];
-  const shroud: P2[] = [[268, y - 38], [520, y - 30], [545, y - 18], [545, y + 16], [520, y + 28], [268, y + 34]];
-  p.gradFill(shroud, metal, metalSh, light);
-  for (let x = 290; x < 515; x += 22) p.stroke([[x, y - 33], [x, y + 30]], 3, metalSh);
-  p.poly(shroud, null, 7);
-  void sh;
-  // muzzle
-  p.poly([[545, y - 9], [585, y - 7], [585, y + 6], [545, y + 8]], metalSh, 6);
-  // drum magazine on top (seen edge-on)
-  p.poly(ell(220, y - 52, 92, 20), metal, 7);
-  p.poly(ell(220, y - 60, 92, 20), shade(metal, 1.2), 7);
-  p.ell(220, y - 60, 22, 6, metalSh, 4);
-  p.inkRing(stock, 0.1, thick);
-  // muzzle flash / jam smoke
-  if (fire > 0) {
-    const r = 46 + 40 * fire;
-    const star: P2[] = [];
-    for (let i = 0; i < 12; i++) { const a = rad(i * 30 + 15 * fire), rr = i % 2 ? r * 0.45 : r; star.push([592 + rr * Math.cos(a) * 1.2, y + rr * Math.sin(a) * 0.8]); }
-    p.poly(star, "#ffd35a", 5);
-    p.poly(ell(592, y, r * 0.35, r * 0.25), "#fff6c9", 0);
-  }
-  if (jam > 0) for (let k = 0; k < 3; k++) {
-    const u = (jam + k * 0.33) % 1;
-    p.ell(250 + 30 * k, y - 100 - 160 * u, 28 + 40 * u, 24 + 30 * u, mix("#8e8a90", "#d8d6da", u), 5);
-  }
-};
-
-// ---------------- pigeon (side view, small card; 1000 units = 0.6 m on its own canvas) ----------------
-export const pigeon = (p: Pen, o: { peck?: number; flap?: number } = {}) => {
-  const { peck = 0, flap = 0 } = o;
-  const body = ell(280, 700, 150, 105, 0, 360, -12);
-  for (const s of [-1, 1]) p.line([[270 + s * 30, 790], [262 + s * 34, 945]], "#d76a5a", 16);
-  p.shadedFill(body, "#9ea3b3", "#6f7487", rad(-120), 150, 0.4);
-  p.poly(body, null, 10);
-  p.poly([[160, 700], [40, 650], [60, 720], [170, 745]], "#5f6476", 8); // tail
-  const wing = flap > 0 ? [[270, 640], [200, 380 - 120 * flap], [140, 600]] as P2[] : [[330, 650], [200, 640], [150, 740], [300, 730]] as P2[];
-  p.poly(wing, "#8a8fa1", 8);
-  const H: P2 = [420, 500 + 260 * peck];
-  p.line([[380, 640], H], "#6f8f86", 70);
-  p.ell(H[0], H[1], 60, 52, "#a3a8b8", 8);
-  p.poly([[470, H[1] - 6], [520, H[1] + 6], [470, H[1] + 16]], "#e6b98a", 6);
-  p.ell(442, H[1] - 12, 11, 12, "#fbf6ec", 4); p.dot(445, H[1] - 11, 6, INK);
-};
-
-// ---------------- the closing emblem: a shield held by an emu and a kangaroo (our own drawing) ----------------
-export const kangaroo = (p: Pen, light = DEF_LIGHT) => {
-  const fur = "#c98a4e", furSh = "#91603a", thick = thickAngle(light);
-  p.line([[230, 760], [80, 950], [20, 960]], fur, 46); // tail
-  const legs: P2[] = [[240, 650], [330, 700], [360, 900], [450, 960], [300, 965], [250, 820]];
-  p.gradFill(legs, fur, furSh, light); p.poly(legs, null, 9);
-  const body = ell(270, 560, 110, 190, 0, 360, -10);
-  p.shadedFill(body, fur, furSh, light, 150, 0.4); p.inkRing(body, 10, thick);
-  p.ell(300, 600, 58, 120, "#e8c79a", 0);
-  for (const s of [0, 1]) p.line([[330, 470 + s * 20], [390, 560 + s * 16], [405, 530 + s * 18]], fur, 22);
-  const H: P2 = [310, 300];
-  for (const s of [-1, 1]) p.poly([[H[0] + s * 18, H[1] - 30], [H[0] + s * 40, H[1] - 120], [H[0] + s * 52, H[1] - 30]], fur, 8);
-  p.poly(ell(H[0] + 20, H[1], 70, 52, 0, 360, 8), fur, 9);
-  p.ell(H[0] + 76, H[1] + 14, 14, 10, INK, 0);
-  p.ell(H[0] + 26, H[1] - 12, 11, 13, "#fbf6ec", 4); p.dot(H[0] + 29, H[1] - 11, 5.5, INK);
-  p.stroke([[H[0] + 14, H[1] - 26], [H[0] + 40, H[1] - 24]], 4);
-};
-
-export const emblem = (p: Pen) => {
-  // gold seven-point star
-  const star: P2[] = [];
-  for (let i = 0; i < 14; i++) { const a = rad(-90 + i * (360 / 14)), r = i % 2 ? 34 : 78; star.push([500 + r * Math.cos(a), 110 + r * Math.sin(a)]); }
-  p.poly(star, "#f2c13a", 7);
-  // wattle sprigs at the base
-  for (const s of [-1, 1]) {
-    p.line([[500 + s * 60, 905], [500 + s * 330, 860]], "#5c7f3a", 16);
-    for (let i = 0; i < 9; i++) p.dot(500 + s * (110 + i * 26), 896 - i * 4 + (i % 2 ? -14 : 12), 15, "#f2c63c");
-  }
-  // shield: six quarters in muted heraldic colours
-  const sh: P2[] = [[330, 230], [670, 230], [670, 560], [500, 760], [330, 560]];
-  const cols = ["#c8453a", "#f1e7d0", "#3f6fb5", "#e3b23c", "#f1e7d0", "#4e8a4f"];
-  p.clip(sh, () => {
-    for (let i = 0; i < 6; i++) { const cx = 330 + (i % 3) * 113.3, cy = 230 + Math.floor(i / 3) * 265; p.poly([[cx, cy], [cx + 114, cy], [cx + 114, cy + 266], [cx, cy + 266]], cols[i], 0); }
+  p.shadedFill(face, COAT, COAT_SH, light, 90, 0.35);
+  p.clip(face, () => {
+    p.ell(hx, hy + 160, 52, 34, MUZZLE, 0);
+    p.poly([[hx - 10, hy - 20], [hx + 10, hy - 20], [hx + 5, hy + 80], [hx - 5, hy + 80]], "#f4ead8", 0);
   });
-  p.poly(sh, null, 10);
-  for (const x of [443, 557]) p.stroke([[x, 232], [x, 700]], 5);
-  p.stroke([[332, 495], [668, 495]], 5);
+  p.inkRing(face, 9, thick);
+  for (const s of [-1, 1]) p.ell(hx + s * 22, hy + 156, 7, 11, INK, 0);
+  p.arc(hx, hy + 168, 18, 6, 20, 160, 4);
+  if (expr === "proud" || expr === "wink") p.arc(hx + 14, hy + 166, 12, 7, -20, 70, 3.5);
+  p.poly([[hx - 30, hy - 40], [hx + 30, hy - 40], [hx + 20, hy + 6], [hx + 6, hy - 10], [hx - 6, hy + 10], [hx - 20, hy - 6]], MANE, 5); // forelock
+  p.band([[hx - 56, hy + 96], [hx + 56, hy + 96]], "#b0473a", 8, 2.2); // noseband
+  for (const s of [-1, 1]) {
+    const ex = hx + s * 48, ey = hy + 6;
+    horseEye(p, ex, ey, 15, expr === "wink" && s > 0 ? "wink" : expr === "wink" ? "proud" : expr, lid, look, COAT);
+    if (blinders) p.poly([[ex + s * 4, ey - 34], [ex + s * 30, ey - 30], [ex + s * 30, ey + 28], [ex + s * 4, ey + 32]], "#2a2226", 5);
+  }
 };
 
-// ---------------- small props as cards ----------------
-/** a wooden ammunition crate, side-on, base on the soles line (0.9 m x 0.48 m) */
-export const crateCard = (p: Pen) => {
-  const x0 = 92, x1 = 508, y0 = 753, y1 = 975, wood = "#a5824f";
-  p.poly([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], wood, 7);
-  for (const y of [y0 + 74, y0 + 148]) p.stroke([[x0 + 4, y], [x1 - 4, y]], 4, "#6e5434");
-  for (const x of [x0 + 22, x1 - 22]) p.stroke([[x, y0 + 4], [x, y1 - 4]], 26, "#7f6038");
-  p.poly([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], null, 7);
+// ---------------- the blackboard on its easel (people scale: 1000 units = 2.16 m), chalk drawn as strokes ----------------
+const G: Record<string, P2[][]> = {
+  "0": [[[0, 0], [1, 0], [1, 2], [0, 2], [0, 0]]], "1": [[[0.3, 0.4], [0.7, 0], [0.7, 2]]], "2": [[[0, 0.3], [0.4, 0], [1, 0.2], [1, 0.8], [0, 2], [1.1, 2]]],
+  "3": [[[0, 0.1], [1, 0.1], [0.4, 0.9], [1, 1.3], [0.9, 1.9], [0, 1.9]]], "5": [[[1, 0], [0.1, 0], [0, 0.9], [0.8, 0.9], [1, 1.5], [0.7, 2], [0, 1.9]]],
+  "+": [[[0, 1], [1, 1]], [[0.5, 0.5], [0.5, 1.5]]], "/": [[[1, 0], [0, 2]]], "=": [[[0, 0.75], [1, 0.75]], [[0, 1.25], [1, 1.25]]], "?": [[[0, 0.4], [0.4, 0], [1, 0.3], [0.5, 1.2], [0.5, 1.5]], [[0.5, 1.9], [0.5, 2]]],
+  H: [[[0, 0], [0, 2]], [[1, 0], [1, 2]], [[0, 1], [1, 1]]], A: [[[0, 2], [0.5, 0], [1, 2]], [[0.2, 1.3], [0.8, 1.3]]], N: [[[0, 2], [0, 0], [1, 2], [1, 0]]],
+  S: [[[1, 0.2], [0.5, 0], [0, 0.4], [1, 1.5], [0.5, 2], [0, 1.8]]],
 };
-/** a spent brass cartridge case (own small canvas) */
-export const casing = (p: Pen) => {
-  p.poly([[40, 20], [88, 20], [92, 200], [36, 200]], "#d9a63c", 8);
-  p.poly([[30, 196], [98, 196], [98, 226], [30, 226]], "#b9862a", 8);
-  p.stroke([[52, 34], [54, 186]], 8, "#f4d27a");
+const chalk = (p: Pen, txt: string, x: number, y: number, sz: number, gap = 0.6) => {
+  let cx = x;
+  for (const ch of txt) {
+    if (ch === " ") { cx += sz * 0.8; continue; }
+    for (const st of G[ch] ?? []) p.stroke(st.map(([a, b]) => [cx + a * sz, y + b * sz * 0.9] as P2), sz * 0.16, "#f2f0e6");
+    cx += sz * (1 + gap);
+  }
+};
+export type BoardKind = "blank" | "sum" | "frac" | "clock" | "name" | "q";
+/** board 1.15 m x 0.85 m on an A-frame easel; tally = chalk taps counted beside the sum (0..5) */
+export const blackboard = (p: Pen, kind: BoardKind = "blank", tally = 0) => {
+  const x0 = 110, x1 = 490, y0 = 150, y1 = 470, wood = "#9a6a3e";
+  p.line([[170, 450], [128, 975]], wood, 16); p.line([[430, 450], [472, 975]], wood, 16); p.line([[300, 140], [300, 960]], shade(wood, 0.75), 12);
+  p.poly([[x0 - 12, y0 - 12], [x1 + 12, y0 - 12], [x1 + 12, y1 + 12], [x0 - 12, y1 + 12]], wood, 7);
+  p.poly([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], "#2f4a3e", 5);
+  p.g.save(); p.g.globalAlpha = 0.18; p.stroke([[x0 + 20, y0 + 250], [x0 + 150, y0 + 270]], 24, "#c9d6cc"); p.stroke([[x1 - 120, y0 + 50], [x1 - 30, y0 + 34]], 18, "#c9d6cc"); p.g.restore();
+  p.poly([[x0 - 6, y1 + 12], [x1 + 6, y1 + 12], [x1 + 6, y1 + 26], [x0 - 6, y1 + 26]], shade(wood, 0.85), 5); // chalk ledge
+  p.poly([[400, y1 + 2], [436, y1], [436, y1 + 12], [400, y1 + 12]], "#f4f1e6", 3);
+  if (kind === "sum") chalk(p, "3+2", 140, 190, 72, 0.45);
+  if (kind === "q") chalk(p, "?", 250, 180, 110);
+  if (kind === "frac") { chalk(p, "1", 170, 170, 54); p.stroke([[146, 296], [252, 296]], 10, "#f2f0e6"); chalk(p, "2", 170, 312, 54); chalk(p, "+", 272, 250, 48); chalk(p, "1", 380, 170, 50); p.stroke([[356, 290], [456, 290]], 9, "#f2f0e6"); chalk(p, "3", 380, 306, 50); }
+  if (kind === "clock") {
+    const cx = 300, cy = 300, R0 = 118;
+    p.arc(cx, cy, R0, R0, 0, 360, 11, "#f2f0e6");
+    for (let i = 0; i < 12; i++) { const a = (i * Math.PI) / 6; p.stroke([[cx + 92 * Math.cos(a), cy + 92 * Math.sin(a)], [cx + 106 * Math.cos(a), cy + 106 * Math.sin(a)]], 8, "#f2f0e6"); }
+    p.stroke([[cx, cy], [cx, cy - 80]], 11, "#f2f0e6"); p.stroke([[cx, cy], [cx + 58, cy + 30]], 11, "#f2f0e6");
+  }
+  if (kind === "name") chalk(p, "HANS", 132, 210, 64, 0.32);
+  for (let i = 0; i < Math.min(5, tally); i++) p.stroke([[150 + i * 30, 400], [150 + i * 30, 448]], 9, "#f2f0e6");
+};
+
+// ---------------- today: a sniffer dog, suitcases, a computer ----------------
+const DOGC = "#b8854e", DOGC_SH = "#7a5634", DOG_DK = "#3a2c28";
+/** dog side view facing right on its own scale (1000 units = 1.2 m, place with scale 0.555); sniff 0..1 lowers the nose */
+export const dogSide = (p: Pen, o: { sniff?: number; tail?: number; light?: number; expr?: "focus" | "proud" } = {}) => {
+  const { sniff = 0, tail = 0, light = DEF_LIGHT, expr = "focus" } = o;
+  const thick = thickAngle(light), Y = (m: number) => 975 - m * 480, X = (m: number) => 300 + m * 480;
+  const far = mul(DOGC, [0.72, 0.7, 0.74]);
+  const tb: P2 = [X(-0.36), Y(0.52)];
+  p.line(qcurve(tb, [tb[0] - 50, tb[1] - 20 - 30 * tail], [tb[0] - 80, tb[1] - 80 * tail + 10], 10), DOGC_SH, 30);
+  for (const [x, near] of [[-0.24, false], [0.22, false], [-0.3, true], [0.28, true]] as const) {
+    const col = near ? DOGC : far;
+    p.line([[X(x), Y(0.42)], [X(x - (x < 0 ? 0.06 : 0)), Y(0.2)], [X(x + 0.02), Y(0.02)]], col, 22);
+    p.ell(X(x + 0.04), Y(0.02) - 3, 16, 8, DOG_DK, 3);
+  }
+  const body = ell(X(0), Y(0.46), 0.42 * 480, 0.15 * 480, 0, 360, -3);
+  p.shadedFill(body, DOGC, DOGC_SH, light, 0.42 * 480, 0.42);
+  p.clip(body, () => p.ell(X(-0.05), Y(0.6), 0.32 * 480, 0.1 * 480, DOG_DK, 0)); // dark saddle
+  p.inkRing(body, 10, thick);
+  const hy = Y(0.72 - 0.42 * sniff), hx = X(0.46 + 0.08 * sniff);
+  p.line([[X(0.3), Y(0.5)], [hx - 14, hy + 14]], DOGC, 60);
+  p.g.save(); p.g.translate(hx, hy); p.g.scale(0.85, 0.85); p.g.translate(-hx, -hy);
+  for (const dx of [-36, -6]) p.poly([[hx + dx - 18, hy - 30], [hx + dx - 4, hy - 112], [hx + dx + 22, hy - 32]], dx < -20 ? DOGC_SH : DOGC, 6);
+  const head: P2[] = [[hx - 60, hy - 30], [hx + 20, hy - 46], [hx + 70, hy - 10], [hx + 128, hy + 6], [hx + 130, hy + 40], [hx + 60, hy + 52], [hx - 40, hy + 50]];
+  p.shadedFill(head, DOGC, DOGC_SH, light, 70, 0.4); p.poly(head, null, 8);
+  p.ell(hx + 124, hy + 16, 16, 13, DOG_DK, 4);
+  p.stroke([[hx + 70, hy + 40], [hx + 112, hy + 36]], 4);
+  horseEye(p, hx + 34, hy - 6, 13, expr === "proud" ? "proud" : "focus", 0, 0.5, DOGC);
+  p.band([[hx - 40, hy + 30], [hx - 20, hy - 30]], "#2f5fa8", 12, 2.5); // collar
+  p.g.restore();
+};
+/** three suitcases in a row (people scale), the middle one dark */
+export const suitcases = (p: Pen) => {
+  const cs = [["#c8453a", 60, 250], ["#3f4f6a", 230, 230], ["#d9a441", 400, 200]] as const;
+  for (const [c, x, w] of cs) {
+    const y0 = 975 - (c === "#3f4f6a" ? 300 : 260);
+    p.poly([[x, y0], [x + w * 0.62, y0], [x + w * 0.62, 975], [x, 975]], c, 7);
+    p.band([[x + w * 0.2, y0], [x + w * 0.2, y0 - 26], [x + w * 0.42, y0 - 26], [x + w * 0.42, y0]], "#2f2a30", 8, 2);
+    p.stroke([[x + 14, y0 + 40], [x + w * 0.62 - 14, y0 + 40]], 4, shade(c, 0.7));
+  }
+};
+/** a desk computer with a camera eye on its screen; look -1..1 follows the person */
+export const computer = (p: Pen, o: { look?: number; blink?: number } = {}) => {
+  const { look = 0, blink = 0 } = o;
+  for (const x of [84, 500]) p.poly([[x, 650], [x + 18, 650], [x + 18, 975], [x, 975]], "#7a5232", 5);
+  p.poly([[60, 620], [540, 620], [540, 655], [60, 655]], "#9a6a3e", 6); // desk top
+  p.poly([[250, 560], [350, 560], [370, 620], [230, 620]], "#c9ccd2", 6);
+  p.poly([[110, 240], [490, 240], [490, 560], [110, 560]], "#e9ecef", 8);
+  p.poly([[134, 264], [466, 264], [466, 536], [134, 536]], "#1f2a44", 5);
+  if (blink > 0.5) p.stroke([[220, 400], [380, 400]], 12, "#7fd6ff");
+  else { p.ell(300, 400, 92, 70, "#d9f3ff", 6); p.dot(300 + look * 40, 404, 34, "#2f6fb5"); p.dot(300 + look * 40, 404, 16, INK); p.dot(288 + look * 40, 392, 6, "#ffffff"); }
+  p.dot(300, 252, 6, "#3a3036");
 };

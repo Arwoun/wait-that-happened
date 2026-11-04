@@ -1,8 +1,8 @@
-// "The Army That Lost a War to Birds" (Emu War, Western Australia, 1932): shots timed to episodes/ep001_emu_war/voice/words.json.
+// "The Horse That Fooled the Experts" (Clever Hans, Berlin, 1904): shots timed to episodes/ep002_clever_hans/voice/words.json.
 // Camera grammar kept from the engine's measured reference: symmetric smootherstep glides of 18-40 f, cuts on big
 // reframes, every hold creeps in, impacts are 7-frame flip kicks, no hand-held float.
 export const FPS = 30;
-export const TOTAL = 2150; // voice 70.0 s + 1.7 s tail on the emblem
+export const TOTAL = 2141; // voice ends 69.64 s + 1.7 s tail
 export const D0 = 0; // flat ground (build.ts helpers sit on D0)
 export type V3 = [number, number, number];
 export const at = (p: V3, dx: number, dy: number, dz: number): V3 => [p[0] + dx, p[1] + dy, p[2] + dz];
@@ -12,40 +12,54 @@ export const smooth = (x: number) => { const u = clamp01(x); return u * u * (3 -
 export const easeOut = (u: number) => 1 - (1 - clamp01(u)) ** 4;
 
 // ---------------- places (world metres, ground y = 0) ----------------
-export const WHEAT_RECTS: [number, number, number, number][] = [[-60, 14, -40, 60], [23, 60, -40, 2]]; // x0 x1 z0 z1
-export const WHEAT_H = 0.72;
-export const TRACK = { x0: 14, x1: 23 }; // stubble track through the wheat, along z
-export const FENCE_Z = -60; // farm fence; the outback (red dirt) lies beyond, toward -z
-export const PADDOCK = { x0: 80, x1: 300, z0: -80, z1: 80 }; // open stubble paddock east of the wheat
-export const DAM: V3 = [-120, 0, -20]; export const DAM_R = 15;
-export const CAMP: V3 = [32, 0, 16]; // army camp: truck, tent, ammo crates
-export const HOUSE: V3 = [-6, 0, 78]; // farmhouse (front door faces -z)
-export const MAILBOX: V3 = [12, 0, 66];
-export const PARK: V3 = [-300, 0, 300]; // a little town park corner (pigeon beat)
-export const MONUMENT: V3 = [300, 0, 300]; // "today": sandstone wall with the emblem
+// the Berlin courtyard (Hinterhof) around the origin: Hans stands at HANS facing +x, the blackboard to his right,
+// the thirteen experts in a row behind him (z = -6), the crowd behind them and along the sides
+export const COURT = { x0: -15, x1: 15, z0: -13, z1: 12 };
+export const HANS: V3 = [0, 0, -2];
+export const BOARD: V3 = [2.25, 0, -2.6];
+export const OSTEN0: V3 = [3.05, 0, -1.6];
+export const ROW_Z = -5;
+/** the thirteen stand in three staggered rows behind Hans: front 1 3 4 5 6 (the named ones), then 0 2 7 8, then 9-12 */
+const GROUP: [number, number, number][] = [[1, -1.0, 0], [3, -0.2, 0], [4, 0.6, 0], [5, 1.4, 0], [6, 2.2, 0], [0, -0.6, 1], [2, 0.2, 1], [7, 1.0, 1], [8, 1.8, 1],
+  [9, -0.6, 2], [10, 0.2, 2], [11, 1.0, 2], [12, 1.8, 2]];
+export const expertPos = (i: number): V3 => { const g = GROUP.find((e) => e[0] === i)!; return [g[1], 0, ROW_Z - 0.8 * g[2]]; };
+export const PFUNGST0: V3 = [3.0, 0, -1.35];
+export const ASKER: V3 = [3.0, 0, -1.35];
+export const PARK: V3 = [200, 0, 0];   // the analogy: two friends and a card trick on a lawn
+export const LAB: V3 = [400, 0, 0];    // today: a lab room (partition, sniffer dog, computer)
+export const LAB_ROOM = { x0: 393, x1: 407, z0: -6, z1: 9, h: 4.2 };
+export const PANEL = { x: 400, z0: -3.4, z1: 0.2, h: 1.95 };
+export const SCI1: V3 = [399.0, 0, -1.4];
+export const SCI2: V3 = [401.0, 0, -1.4];
+export const DOG: V3 = [396.6, 0, 3.4];
+export const BAGS: V3 = [397.55, 0, 3.05];
+export const HANDLER0: V3 = [395.95, 0, 3.95];
+export const DESK: V3 = [403.3, 0, 3.1];
+export const USER: V3 = [404.3, 0, 2.6];
 
 // ---------------- shots ----------------
 export type Light = "day" | "golden";
 export type ShotDef = { id: number; a: number; b: number; light: Light; sunAz?: number; sunEl?: number };
+const C = { sunEl: 62 }; // a high sun so the courtyard walls do not shade the yard
 export const SHOTS: ShotDef[] = [
-  { id: 1, a: 0, b: 128, light: "day" },
-  { id: 2, a: 128, b: 318, light: "day", sunAz: 110 },
-  { id: 3, a: 318, b: 420, light: "day" },
-  { id: 4, a: 420, b: 540, light: "day" },
-  { id: 5, a: 540, b: 682, light: "day" },
-  { id: 6, a: 682, b: 856, light: "day", sunAz: 120 },
-  { id: 7, a: 856, b: 1062, light: "day" },
-  { id: 8, a: 1062, b: 1170, light: "day", sunAz: 110 },
-  { id: 9, a: 1170, b: 1240, light: "golden" },
-  { id: 10, a: 1240, b: 1350, light: "day" },
-  { id: 11, a: 1350, b: 1464, light: "day" },
-  { id: 12, a: 1464, b: 1630, light: "day" },
-  { id: 13, a: 1630, b: 1800, light: "golden" },
-  { id: 14, a: 1800, b: 1970, light: "day" },
-  { id: 15, a: 1970, b: TOTAL, light: "day", sunAz: 140 },
+  { id: 1, a: 0, b: 164, light: "day", ...C },
+  { id: 2, a: 164, b: 330, light: "day", ...C, sunAz: 100 },
+  { id: 3, a: 330, b: 437, light: "day", ...C },
+  { id: 4, a: 437, b: 546, light: "day", ...C },
+  { id: 5, a: 546, b: 650, light: "day", ...C, sunAz: 110 },
+  { id: 6, a: 650, b: 832, light: "day", ...C },
+  { id: 7, a: 832, b: 928, light: "golden", sunAz: 20 },
+  { id: 8, a: 928, b: 1088, light: "day", ...C },
+  { id: 9, a: 1088, b: 1272, light: "day", ...C },
+  { id: 10, a: 1272, b: 1512, light: "day", ...C },
+  { id: 11, a: 1512, b: 1657, light: "day", ...C, sunAz: 110 },
+  { id: 12, a: 1657, b: 1768, light: "day", sunAz: 120 },
+  { id: 13, a: 1768, b: 1885, light: "day", sunEl: 70 },
+  { id: 14, a: 1885, b: 1985, light: "day", sunEl: 70 },
+  { id: 15, a: 1985, b: TOTAL, light: "golden", sunAz: 30, sunEl: 12 },
 ];
-export const XFADE: Record<number, number> = { 9: 8, 10: 8, 13: 8, 14: 8, 15: 10 };
-export const FLASH_AT = 128;
+export const XFADE: Record<number, number> = { 7: 8, 8: 8, 12: 8, 13: 8, 15: 10 };
+export const FLASH_AT = 164;
 
 export const shotAt = (f: number) => SHOTS.find((s) => f >= s.a && f < s.b) ?? SHOTS[SHOTS.length - 1];
 export const layersAt = (f: number): { id: number; alpha: number }[] => {
@@ -57,14 +71,27 @@ export const layersAt = (f: number): { id: number; alpha: number }[] => {
 };
 
 // ---------------- story motion (t = seconds) ----------------
-/** the chase: truck from x = 100 along z = 0 at 8 m/s from t = 30.6; the emus run at 13.4 m/s (30 mph) */
-export const CHASE_T0 = 30.6;
-export const truckX = (t: number) => 100 + 8 * Math.max(0, t - CHASE_T0);
-export const bump = (t: number, k = 1) => {
-  const s = Math.max(0, t - CHASE_T0);
-  return { heave: k * (0.07 * Math.abs(Math.sin(9.1 * s)) + 0.05 * Math.abs(Math.sin(13.7 * s + 1))), pitch: k * 0.05 * Math.sin(7.3 * s + 0.4), roll: k * 0.04 * Math.sin(5.1 * s + 2) };
+/** hoof taps (strike times in seconds): the hoof lifts over 0.17 s and strikes at the listed time */
+export const TAPS: number[] = [
+  0.9, 1.25, 1.6, 1.95, 2.3,                                   // hook
+  12.76, 12.96, 13.16, 13.36, 13.56,                           // three plus two: five taps
+  14.85, 15.2, 15.55, 16.25, 16.6, 16.95, 17.3, 17.65,         // fractions, the time, names
+  36.95, 37.25, 37.55, 37.85, 38.15,                           // could see someone who knew
+  40.75, 41.0, 41.25, 41.5, 41.75, 42.0, 42.25,                // blinders: he never stops
+  45.0, 45.35, 45.7, 46.05, 46.4, 46.75, 47.1, 47.45, 47.8, 48.15, 48.5, // as his taps got close... on the right tap
+];
+export const tapLift = (t: number) => {
+  let k = 0;
+  for (const ts of TAPS) { const u = (t - ts + 0.17) / 0.17; if (u > 0 && u < 1) k = Math.max(k, Math.sin(Math.PI * u)); }
+  return k;
 };
-export const CHASE2_T0 = 53.1;
+export const tapsBefore = (t: number, t0: number, t1: number) => TAPS.filter((x) => x >= t0 && x <= Math.min(t, t1)).length;
+/** the thirteen experts walk in along +x (z = ROW_Z) and stop at their places by t = 23.4 */
+export const expertWalkX = (i: number, t: number) => { const xe = expertPos(i)[0], u = clamp01((t - 21.6 - 0.08 * (i % 5)) / 1.7); return xe - (1 - easeOut(u)) * 7; };
+/** Pfungst walks in from +x and stops at PFUNGST0 by t = 32.6 */
+export const pfungstX = (t: number) => PFUNGST0[0] + 3.2 * (1 - smooth((t - 30.9) / 1.7));
+/** the crowd pours through the gate in the north row (z = -13) toward the yard */
+export const crowdZ = (i: number, t: number) => -13.5 - (i % 7) * 0.9 - Math.floor(i / 7) * 0.5 + 2.4 * (t - 18.2);
 
 // ---------------- camera ----------------
 export type Cam = { pos: V3; look: V3; fov: number; roll: number };
@@ -97,97 +124,82 @@ const dolly = (pos: V3, look: V3, k: number, rest: Partial<Cam> = {}): Shot =>
 const zoom = (pos: V3, look: V3, fov: number, k: number, rest: Partial<Cam> = {}): Shot =>
   ({ pos, look, fov: (360 / Math.PI) * Math.atan(Math.tan((fov * Math.PI) / 360) * k), ...rest });
 
-// shot 1: the gunner sits at HOOK (paddock) facing -z, the emu stands 8 m ahead
-export const HOOK: V3 = [120, 0, 20];
-export const S1_EMU: V3 = at(HOOK, 0.7, 0, -8);
-const S1a = (f: number) => dolly(at(HOOK, -0.1, 1.6, 4.4), at(HOOK, 0.35, 1.0, -3.5), pushK(f, 0, 0.0018), { fov: 42 });
-const S1b = (f: number) => dolly(at(HOOK, -0.2, 1.6, 3.0), at(HOOK, 0.6, 1.2, -5.5), pushK(f, 52, 0.0012), { fov: 38, roll: -0.035 });
-const S1c = (f: number) => dolly(at(HOOK, 1.05, 1.5, -4.6), at(HOOK, 0.7, 1.52, -8), pushK(f, 85, 0.002, 0.006, 30), { fov: 34, roll: 0.03 });
-// shot 2: the stream of emus through the fence gap into the wheat
-const S2a = (f: number) => zoom([42, 30, -18], [0, 0, -112], 46, pushK(f, 124, 0.002));
-const S2b = (f: number) => dolly([22, 8.5, -44], [0, 1.0, -92], pushK(f, 188, 0.002), { fov: 42, roll: -0.03 });
-const S2c = (f: number) => dolly([2.6, 0.95, -27.5], [0.2, 1.15, -44], pushK(f, 291, 0.003), { fov: 40 });
-// shot 3: the farmer on the track, emus in the wheat behind him
-export const FARMER3: V3 = [18.5, 0, -30];
-const S3a = (f: number) => dolly(at(FARMER3, 2.2, 1.65, 5.6), at(FARMER3, -0.4, 1.4, -1.5), pushK(f, 318, 0.0025), { fov: 40 });
-const S3b = (f: number) => dolly(at(FARMER3, 0.7, 1.75, 2.7), at(FARMER3, 0, 1.78, 0), pushK(f, 376, 0.002, 0.005, 30), { fov: 36, roll: 0.035 });
-// shot 4: the camp
-export const SOLDIERS4: V3[] = [at(CAMP, -1.3, 0, 0), at(CAMP, 0, 0, -0.2), at(CAMP, 1.3, 0, 0)];
-export const CRATE_GUNS: V3 = at(CAMP, -4.5, 0, -2.5);
-export const AMMO: V3 = at(CAMP, 4.5, 0, -3.5);
-const S4a = (f: number) => dolly(at(CAMP, 0.2, 1.6, -9.8), at(CAMP, 0, 1.3, 0.5), pushK(f, 420, 0.0015), { fov: 44 });
-const S4b = (f: number) => dolly(at(CRATE_GUNS, 1.2, 1.25, -2.6), at(CRATE_GUNS, 0, 0.95, 0), pushK(f, 470, 0.003), { fov: 36, roll: -0.035 });
-const S4c = (f: number) => zoom(at(AMMO, -2.6, 0.45, -5.8), at(AMMO, 0, 2.0, 0), 48, pushK(f, 500, 0.002, 0.005, 30), { roll: 0.04 });
-// shot 5: day one in the paddock, the gunner at GUN5 facing -z, emus ~95 m away
-export const GUN5: V3 = [150, 0, 40];
-const S5a = (f: number) => zoom(at(GUN5, -0.5, 2.6, 5.5), at(GUN5, -0.3, 0.6, -55), 32, pushK(f, 540, 0.0015));
-const S5b = (f: number) => dolly(at(GUN5, 3.8, 1.2, -1.3), at(GUN5, -0.2, 0.95, -1.3), pushK(f, 618, 0.0025), { fov: 40, roll: 0.03 });
-const S5c = (f: number) => zoom(at(GUN5, 0.6, 1.5, -30), at(GUN5, 0, 1.0, -70), 32, pushK(f, 650, 0.002), { roll: -0.03 });
-// shot 6: the dam; three soldiers crouch behind its south bank, the gun on the bank top
-export const HIDE6: V3 = at(DAM, 0, 0, DAM_R + 6.5);
-const S6a = (f: number) => zoom(at(DAM, 12, 14, 52), at(DAM, 0, 0, -12), 42, pushK(f, 682, 0.002));
-const S6b = (f: number) => dolly(at(HIDE6, 2.6, 1.1, 6.0), at(HIDE6, 0, 0.95, 0), pushK(f, 776, 0.0025), { fov: 38 });
-const S6c = (f: number) => dolly(at(HIDE6, 0.9, 1.75, 3.6), at(HIDE6, 0, 1.35, -1.2), pushK(f, 820, 0.0025, 0.005, 25), { fov: 40, roll: -0.04 });
-// shot 7: bolting the gun on (parked), then the chase along +x
-const S7a = (f: number) => dolly([99.6, 2.1, 9.8], [98.9, 1.4, 0.5], pushK(f, 856, 0.0015), { fov: 44 });
-const S7b = (f: number): Shot => { const x = truckX(T(f)); return { pos: [x + 3.0, 2.6, 26], look: [x + 3.5, 1.0, 0], fov: 42, roll: 0 }; };
-const S7c = (f: number): Shot => { const x = truckX(T(f)), b = bump(T(f)); return { pos: [x - 4.4, 2.9 + b.heave, 3.6], look: [x - 2.1, 1.95 + b.heave * 0.6, 0], fov: 42, roll: b.roll * 0.6 }; };
-// shot 8: groups, then one lookout
-export const LEADER8: V3 = [190, 0, -8];
-const S8a = (f: number) => zoom([178, 20, 52], [192, 0, -6], 44, pushK(f, 1062, 0.002));
-const S8b = (f: number) => dolly(at(LEADER8, 0.35, 1.75, 3.4), at(LEADER8, 0, 1.85, 0), pushK(f, 1122, 0.002, 0.005, 30), { fov: 34 });
-// shot 9: golden retreat to the truck (parked at 100, 0, 0)
-const S9a = (f: number) => dolly([107.5, 1.9, 16], [106.2, 1.1, 2.5], pushK(f, 1166, 0.0018), { fov: 42 });
-// shot 10: the truck comes back down the track; then a soldier in the wheat, emus rising all around
-export const SOLDIER10: V3 = [18.5, 0, -12];
-export const TRUCK10Z = (t: number) => -80 + 9 * Math.min(1.9, Math.max(0, t - 41.2));
-const S10a = (f: number) => dolly([20.5, 1.45, -46], [18.5, 1.6, -66], pushK(f, 1236, 0.0025), { fov: 40 });
-const S10b = (f: number) => dolly(at(SOLDIER10, 0.5, 1.6, 4.4), at(SOLDIER10, 0, 1.5, 0), pushK(f, 1300, 0.002, 0.005, 30), { fov: 42, roll: -0.03 });
-// shot 11: the major (camp), then "like tanks"
-export const MAJOR11: V3 = at(CAMP, -1.0, 0, 3.2);
-export const TANK11: V3 = [230, 0, -6];
-const S11a = (f: number) => dolly(at(MAJOR11, 0.35, 1.72, 3.5), at(MAJOR11, 0, 1.68, 0), pushK(f, 1350, 0.0022), { fov: 38 });
-const S11b = (f: number) => dolly(at(TANK11, 0.25, 0.42, 6.4), at(TANK11, 0, 1.35, 0), pushK(f, 1418, 0.002), { fov: 42, roll: 0.035 });
-// shot 12: the park corner (pigeon), the towering crowd, the truck overtaken
-const S12a = (f: number) => dolly(at(PARK, 0.4, 1.3, 6.2), at(PARK, -0.6, 0.85, 0), pushK(f, 1464, 0.0018), { fov: 42 });
-export const WALL12: V3 = [250, 0, 0];
-const S12b = (f: number) => dolly(at(WALL12, 0, 0.3, 7.5), at(WALL12, 0, 2.3, 0), pushK(f, 1534, 0.002, 0.005, 30), { fov: 50 });
-const S12c = (f: number): Shot => { const x = truckX(T(f) - CHASE2_T0 + CHASE_T0); return { pos: [x + 1.5, 2.4, 24], look: [x + 1.5, 1.0, 0], fov: 42 }; };
-// shot 13: golden camp, exhausted gunners on empty crates; then one emu and ten falling cartridge cases
-export const EMU13: V3 = [182, 0, -20];
-const S13a = (f: number) => dolly(at(CAMP, 1.0, 1.35, -6.6), at(CAMP, 1.4, 0.9, 0.2), pushK(f, 1626, 0.002), { fov: 42 });
-const S13b = (f: number) => dolly(at(EMU13, 0.3, 1.62, 3.5), at(EMU13, 0, 1.55, 0), pushK(f, 1754, 0.002), { fov: 36 });
-// shot 14: the farmer at his mailbox; the years land as push pops; then the empty track, emus crossing
-const S14a = (f: number) => {
-  const pops = [1842, 1874, 1901].reduce((a, p) => a + 0.09 * glide((f - p + 3) / 8), 0);
-  return dolly(at(MAILBOX, 2.1, 1.7, -4.2), at(MAILBOX, -0.6, 1.55, 0.3), pushK(f, 1796, 0.0018) * (1 - pops), { fov: 40 });
+// shot 1: hook. Hans tapping at the board, the experts behind; their faces; Hans, front
+const S1a = (f: number) => dolly([0.8, 2.75, 7.6], [0.8, 1.15, -3.0], pushK(f, 0, 0.0012), { fov: 42 });
+const S1b = (f: number) => dolly([0.6, 1.72, -2.45], [0.6, 1.6, ROW_Z], pushK(f, 112, 0.003), { fov: 40, roll: -0.03 });
+const S1c = (f: number) => dolly([0.05, 1.95, 1.6], [0, 1.85, -2], pushK(f, 140, 0.002, 0.007, 20), { fov: 38, roll: 0.03 });
+// shot 2: Berlin from above, then down into the yard: von Osten at the board with his cane
+const S2a = (f: number) => zoom([3, 19, 21], [0.4, 1.2, -6], 50, pushK(f, 160, 0.0018));
+const S2b = (f: number) => dolly([2.05, 1.65, 5.2], [2.05, 1.35, -2.0], pushK(f, 268, 0.0015), { fov: 42 });
+// shot 3: "3 + 2" on the board and Hans's head; the hoof, five taps; the board with the tally
+const S3a = (f: number) => dolly([1.6, 1.75, 3.2], [1.6, 1.5, -2.4], pushK(f, 326, 0.0015), { fov: 42, roll: 0.03 });
+const S3b = (f: number) => dolly([1.6, 0.75, 2.6], [0.45, 0.6, -2], pushK(f, 382, 0.002), { fov: 40 });
+const S3c = (f: number) => dolly([1.65, 1.7, 3.0], [1.65, 1.45, -2.4], pushK(f, 414, 0.0015, 0.005, 20), { fov: 40, roll: -0.03 });
+// shot 4: fractions, the time, a name: the board and Hans's head, a push pop on each change
+const S4a = (f: number) => {
+  const pops = [453, 483, 503].reduce((a, p) => a + 0.07 * glide((f - p + 3) / 6), 0);
+  return dolly([1.6, 1.8, 4.0], [1.6, 1.5, -2.4], pushK(f, 433, 0.0012) * (1 - pops), { fov: 42 });
 };
-const S14b = (f: number) => dolly(at(MAILBOX, 10, 2.4, -14), at(MAILBOX, -2, 0.9, 1), pushK(f, 1934, 0.002), { fov: 44, roll: 0.03 });
-// shot 15: the monument
-const S15a = (f: number) => dolly(at(MONUMENT, 0.3, 3.0, 19), at(MONUMENT, 0, 2.9, 0), pushK(f, 1964, 0.0018), { fov: 46 });
-const S15b = (f: number) => dolly(at(MONUMENT, -1.5, 2.6, 10.5), at(MONUMENT, -1.5, 2.6, 0.6), pushK(f, 2030, 0.0015), { fov: 42 });
-const S15c = (f: number) => dolly(at(MONUMENT, -2.7, 2.75, 3.6), at(MONUMENT, -3.0, 2.72, 0.7), pushK(f, 2084, 0.0025, 0.005, 30), { fov: 34, roll: 0.03 });
+// shot 5: the crowd pours in through the gate; then von Osten refuses a coin
+const S5a = (f: number) => dolly([0.6, 2.4, 5.0], [0.3, 1.4, -13], pushK(f, 542, 0.0018), { fov: 46 });
+const S5b = (f: number) => dolly([3.35, 1.65, 2.9], [3.35, 1.45, -1.4], pushK(f, 598, 0.0025), { fov: 40, roll: 0.03 });
+// shot 6: the thirteen walk in; then the front row from close, gliding to each one as he is named
+const S6a = (f: number) => dolly([0.6, 2.9, 5.6], [0.6, 1.0, -5.6], pushK(f, 646, 0.0016), { fov: 46 });
+const rowCam = (x: number) => (f: number) => dolly([x, 1.66, ROW_Z + 2.5], [x, 1.55, ROW_Z], pushK(f, 708, 0.001), { fov: 40 });
+// shot 7: September, golden: the professor reads the verdict in front of the others
+export const PROF7: V3 = [0.6, 0, -3.9];
+const S7a = (f: number) => dolly([0.6, 1.75, -1.2], [0.6, 1.5, -4.4], pushK(f, 828, 0.0025, 0.006, 25), { fov: 42 });
+// shot 8: Pfungst walks in; then his face: he does not know the answer
+const S8a = (f: number) => dolly([2.0, 1.7, 5.0], [2.0, 1.3, -1.8], pushK(f, 924, 0.0012), { fov: 44 });
+const S8b = (f: number) => dolly([3.0, 1.75, 0.9], [3.0, 1.65, -1.35], pushK(f, 1018, 0.0025), { fov: 40, roll: -0.03 });
+// shot 9: a questioner who knows, Hans taps right; then blinders, the questioner shrugs, Hans keeps going
+const S9a = (f: number) => dolly([1.8, 1.7, 6.6], [1.8, 1.15, -1.8], pushK(f, 1084, 0.0012), { fov: 44 });
+const S9b = (f: number) => dolly([1.3, 1.75, 2.8], [1.2, 1.6, -2.0], pushK(f, 1216, 0.0015, 0.005, 25), { fov: 42, roll: 0.03 });
+// shot 10: his eye; the questioner tenses and relaxes; the hoof stops
+const S10a = (f: number) => dolly([1.2, 1.85, 0.6], [1.0, 1.7, -2], pushK(f, 1268, 0.0025), { fov: 40 });
+const S10b = (f: number) => dolly([1.08, 1.75, -0.9], [1.02, 1.71, -2], pushK(f, 1326, 0.002), { fov: 36 });
+const S10c = (f: number) => dolly([3.05, 1.6, 1.0], [3.0, 1.5, -1.35], pushK(f, 1347, 0.0015), { fov: 40 });
+const S10d = (f: number) => dolly([0.4, 1.5, 6.0], [0.4, 1.05, -2], pushK(f, 1481, 0.0025), { fov: 42, roll: -0.03 });
+// shot 11: von Osten and Pfungst; then von Osten, arms crossed
+export const OSTEN11: V3 = [2.25, 0, -1.4], PF11: V3 = [3.15, 0, -1.15];
+const S11a = (f: number) => dolly([2.7, 1.65, 2.6], [2.7, 1.4, -1.3], pushK(f, 1508, 0.002), { fov: 42 });
+const S11b = (f: number) => dolly([2.3, 1.68, 1.7], [2.25, 1.55, -1.4], pushK(f, 1561, 0.0022, 0.005, 25), { fov: 40, roll: 0.035 });
+// shot 12: the park, the card trick; then your face lights up
+const S12a = (f: number) => dolly(at(PARK, 0.05, 1.45, 3.9), at(PARK, 0.05, 1.15, -0.2), pushK(f, 1653, 0.002), { fov: 42 });
+const S12b = (f: number) => dolly(at(PARK, 0.55, 1.62, 2.0), at(PARK, 0.5, 1.55, -0.35), pushK(f, 1714, 0.002, 0.007, 20), { fov: 40, roll: -0.03 });
+// shot 13: today, a lab: a scientist; then the partition and both sides
+const S13a = (f: number) => dolly(at(SCI1, 0.2, 1.62, 2.8), at(SCI1, 0, 1.5, 0), pushK(f, 1764, 0.002), { fov: 40 });
+const S13b = (f: number) => dolly([401.8, 3.4, 5.2], [400, 1.0, -1.4], pushK(f, 1851, 0.002), { fov: 44 });
+// shot 14: the sniffer dog and the suitcases; then a computer watching a face
+const S14a = (f: number) => dolly([396.85, 1.1, 8.6], [396.85, 0.75, 3.0], pushK(f, 1881, 0.0012), { fov: 42 });
+const S14b = (f: number) => dolly([403.75, 1.35, 7.6], [403.75, 1.1, 2.9], pushK(f, 1944, 0.0015), { fov: 42, roll: 0.03 });
+// shot 15: back in the yard at sunset: Hans, hoof up; pull back to the thirteen; a wink
+const S15a = (f: number) => dolly([0.3, 1.5, 6.4], [0.3, 1.1, -2], pushK(f, 1980, 0.002), { fov: 42 });
+const S15b = (f: number) => dolly([0.05, 1.95, 1.6], [0, 1.85, -2.2], 1, { fov: 38 });
+const S15c = (f: number) => dolly([0.4, 2.3, 7.6], [0.4, 1.4, -4.0], pushK(f, 2060, 0.0018), { fov: 42 });
 
+const ROWX = (i: number) => expertPos(i)[0];
 const CAMS: Record<number, Key[]> = {
-  1: [{ f: 0, s: S1a }, { f: 52, dur: 30, s: S1b }, { f: 85, cut: true, s: S1c }],
-  2: [{ f: 124, s: S2a }, { f: 188, dur: 32, s: S2b }, { f: 291, cut: true, s: S2c }],
-  3: [{ f: 314, s: S3a }, { f: 376, cut: true, s: S3b }],
-  4: [{ f: 416, s: S4a }, { f: 470, cut: true, s: S4b }, { f: 500, cut: true, s: S4c }],
-  5: [{ f: 536, s: S5a }, { f: 618, cut: true, s: S5b }, { f: 650, cut: true, s: S5c }],
-  6: [{ f: 678, s: S6a }, { f: 776, cut: true, s: S6b }, { f: 820, cut: true, s: S6c }],
-  7: [{ f: 852, s: S7a }, { f: 925, cut: true, s: S7b }, { f: 981, cut: true, s: S7c }],
-  8: [{ f: 1058, s: S8a }, { f: 1122, cut: true, s: S8b }],
-  9: [{ f: 1166, s: S9a }],
-  10: [{ f: 1236, s: S10a }, { f: 1300, cut: true, s: S10b }],
-  11: [{ f: 1346, s: S11a }, { f: 1418, cut: true, s: S11b }],
-  12: [{ f: 1460, s: S12a }, { f: 1534, cut: true, s: S12b }, { f: 1594, cut: true, s: S12c }],
-  13: [{ f: 1626, s: S13a }, { f: 1754, cut: true, s: S13b }],
-  14: [{ f: 1796, s: S14a }, { f: 1934, cut: true, s: S14b }],
-  15: [{ f: 1964, s: S15a }, { f: 2030, dur: 34, s: S15b }, { f: 2084, cut: true, s: S15c }],
+  1: [{ f: 0, s: S1a }, { f: 112, cut: true, s: S1b }, { f: 140, cut: true, s: S1c }],
+  2: [{ f: 160, s: S2a }, { f: 200, dur: 66, s: S2b }],
+  3: [{ f: 326, s: S3a }, { f: 382, cut: true, s: S3b }, { f: 414, cut: true, s: S3c }],
+  4: [{ f: 433, s: S4a }],
+  5: [{ f: 542, s: S5a }, { f: 598, cut: true, s: S5b }],
+  6: [{ f: 646, s: S6a }, { f: 708, cut: true, s: rowCam(ROWX(1)) }, { f: 714, dur: 12, s: rowCam(ROWX(3)) }, { f: 736, dur: 14, s: rowCam(ROWX(4)) },
+    { f: 760, dur: 16, s: rowCam(ROWX(5)) }, { f: 784, dur: 18, s: rowCam(ROWX(6)) }],
+  7: [{ f: 828, s: S7a }],
+  8: [{ f: 924, s: S8a }, { f: 1018, cut: true, s: S8b }],
+  9: [{ f: 1084, s: S9a }, { f: 1216, cut: true, s: S9b }],
+  10: [{ f: 1268, s: S10a }, { f: 1300, dur: 30, s: S10b }, { f: 1347, cut: true, s: S10c }, { f: 1481, cut: true, s: S10d }],
+  11: [{ f: 1508, s: S11a }, { f: 1561, cut: true, s: S11b }],
+  12: [{ f: 1653, s: S12a }, { f: 1714, cut: true, s: S12b }],
+  13: [{ f: 1764, s: S13a }, { f: 1851, cut: true, s: S13b }],
+  14: [{ f: 1881, s: S14a }, { f: 1944, cut: true, s: S14b }],
+  15: [{ f: 1980, s: S15a }, { f: 2029, cut: true, s: S15b }, { f: 2036, dur: 40, s: S15c }],
 };
 
-/** impact kicks: the gun jamming, the bolting hammer, the years, "no" */
-const KICKS: [number, number][] = [[27.58, 0.8], [29.24, 0.5], [30.22, 0.6], [61.42, 0.5], [62.48, 0.5], [63.38, 0.6], [64.86, 0.4]];
+/** impact kicks: "no trick", the blinders' first tap, "stopped", "book" */
+const KICKS: [number, number][] = [[29.7, 0.5], [40.74, 0.4], [49.74, 0.5], [69.5, 0.4]];
 export const kickAt = (t: number) => {
   let a = 0;
   for (const [t0, g] of KICKS) {
@@ -213,35 +225,38 @@ export const keyEnd = (id: number, f: number) => {
 // ---------------- lens ----------------
 export type Dof = { f: number; dur?: number; cInf: number; focus?: (f: number) => V3 };
 export const DOF: Dof[] = [
-  { f: 0, cInf: 10, focus: () => [120.7, 1.4, 12] },
-  { f: 85, cInf: 15 },
-  { f: 128, cInf: 0 },
-  { f: 291, cInf: 8, focus: () => [0.2, 1.3, -40] },
-  { f: 318, cInf: 11, focus: () => [18.5, 1.6, -30] },
-  { f: 376, cInf: 14, focus: () => [18.5, 1.78, -30] },
-  { f: 420, cInf: 0 },
-  { f: 470, cInf: 12 },
-  { f: 500, cInf: 0 },
-  { f: 618, cInf: 10 },
+  { f: 0, cInf: 8, focus: () => [0.6, 1.4, -2] },
+  { f: 112, cInf: 13 },
+  { f: 140, cInf: 15 },
+  { f: 164, cInf: 0 },
+  { f: 268, cInf: 9, focus: () => [1.6, 1.5, -1.2] },
+  { f: 330, cInf: 10 },
+  { f: 382, cInf: 12 },
+  { f: 414, cInf: 10 },
+  { f: 437, cInf: 9 },
+  { f: 546, cInf: 0 },
+  { f: 598, cInf: 11 },
   { f: 650, cInf: 0 },
-  { f: 776, cInf: 10 },
-  { f: 820, cInf: 13 },
-  { f: 856, cInf: 0 },
-  { f: 981, cInf: 9 },
-  { f: 1062, cInf: 0 },
-  { f: 1122, cInf: 15 },
-  { f: 1170, cInf: 5 },
-  { f: 1240, cInf: 0 },
-  { f: 1300, cInf: 10 },
-  { f: 1350, cInf: 12 },
-  { f: 1418, cInf: 8 },
-  { f: 1464, cInf: 9 },
-  { f: 1534, cInf: 0 },
-  { f: 1630, cInf: 6 },
-  { f: 1754, cInf: 15 },
-  { f: 1800, cInf: 10 },
-  { f: 1934, cInf: 0 },
-  { f: 2084, cInf: 12 },
+  { f: 708, cInf: 12 },
+  { f: 832, cInf: 9 },
+  { f: 928, cInf: 5 },
+  { f: 1018, cInf: 13 },
+  { f: 1088, cInf: 6 },
+  { f: 1216, cInf: 10 },
+  { f: 1272, cInf: 15 },
+  { f: 1347, cInf: 12 },
+  { f: 1481, cInf: 9 },
+  { f: 1512, cInf: 8 },
+  { f: 1561, cInf: 13 },
+  { f: 1657, cInf: 8 },
+  { f: 1714, cInf: 14 },
+  { f: 1768, cInf: 11 },
+  { f: 1851, cInf: 0 },
+  { f: 1885, cInf: 9 },
+  { f: 1944, cInf: 11 },
+  { f: 1985, cInf: 9 },
+  { f: 2029, cInf: 14 },
+  { f: 2060, dur: 20, cInf: 6, focus: () => [0, 1.6, -2] },
 ];
 export const dofAt = (f: number) => {
   let i = 0; while (i + 1 < DOF.length && f >= DOF[i + 1].f) i++;
