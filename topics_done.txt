@@ -1,1 +1,2 @@
 ep001_emu_war | The Emu War, Western Australia, 1932
+ep002_clever_hans | Clever Hans, the horse that 'did math', Berlin, 1904

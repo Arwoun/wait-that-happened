@@ -1,0 +1,60 @@
+{
+  "id": "ep002_clever_hans",
+  "title": "The Horse That Fooled the Experts",
+  "voice": "Charon",
+  "style": "in a calm, dry, deadpan documentary voice, at a brisk and lively pace with only short pauses between sentences",
+  "beats": [
+    {
+      "vo": "In 1904, a team of German experts tested a horse that could do math. And they agreed: he really could."
+    },
+    {
+      "vo": "It's Berlin, and a math teacher named Wilhelm von Osten has spent years giving school lessons to his horse, Hans."
+    },
+    {
+      "vo": "Ask Hans what three plus two is, and he taps his hoof. Five times."
+    },
+    {
+      "vo": "Soon he's doing fractions, telling the time, and even spelling out names."
+    },
+    {
+      "vo": "Crowds pour into the courtyard, and von Osten never charges them a single coin."
+    },
+    {
+      "vo": "So thirteen experts show up: teachers, a vet, a cavalry officer, a circus manager, and the director of the Berlin Zoo."
+    },
+    {
+      "vo": "In September 1904, they announce there's no trick at all."
+    },
+    {
+      "vo": "Then a psychologist named Oskar Pfungst tries something new. He asks questions he doesn't know the answer to."
+    },
+    {
+      "vo": "When Hans could see someone who knew the answer, he was right eighty-nine percent of the time. When he couldn't, six percent."
+    },
+    {
+      "vo": "Hans wasn't counting. He was watching. As his taps got close to the answer, people tensed up, and on the right tap they relaxed. So Hans stopped."
+    },
+    {
+      "vo": "Luckily, nobody was cheating. Unluckily, that included von Osten, who never believed a word of it."
+    },
+    {
+      "vo": "It's like a friend guessing your card, because your face lights up the moment they touch it."
+    },
+    {
+      "vo": "Today it's called the Clever Hans effect, and it's why experiments are run double-blind."
+    },
+    {
+      "vo": "It has even been caught in drug-sniffing dogs, and in artificial intelligence."
+    },
+    {
+      "vo": "Hans never learned to count to five. But he could read thirteen experts like a book."
+    }
+  ],
+  "caption": "In 1904, thirteen experts agreed a horse could do math. Then one psychologist asked a better question. #history #cleverhans #psychology #didyouknow #animation",
+  "sources": [
+    "https://en.wikipedia.org/wiki/Clever_Hans",
+    "https://www.todayifoundout.com/index.php/2013/12/horse-math-unintentional-clever-hans-hoax/",
+    "https://sd4kids.skepdic.com/cleverhans.html"
+  ],
+  "max_seconds": 70
+}
